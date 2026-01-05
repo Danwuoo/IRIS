@@ -75,6 +75,8 @@ Z = [ T ; G ; O₁…Oₙ ; R₁…Rₖ ; X₁…Xₘ ; M₁…Mₚ ]
 
 ```
 
+Only the token categories defined in Section 3.1 may appear in `Z`. Program IR tokens are not State IR tokens and must never be concatenated into the canonical State IR sequence `Z`, even transiently.
+
 Where:
 
 - `T ∈ ℝ¹ˣᵈ`

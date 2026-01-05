@@ -55,7 +55,7 @@ The system **must not** rely on a single end-to-end loss that freely adjusts all
 Failure recovery decisions are **model outputs**, not engineering fallbacks.
 
 * “Retry,” “expand search,” “re-perceive,” etc. are **actions chosen by learned heads**.
-* Hard-coded retry policies are considered technical debt and must be explicitly marked as such.
+* Hard-coded retry policies are considered technical debt and must be explicitly marked as such; they may only act as guardrails, not routine policy.
 
 ---
 
@@ -205,6 +205,8 @@ This distribution is consumed by:
 * Level 3 (for recovery strategy selection)
 * Training pipelines (for loss routing)
 
+Level 6 must not emit direct computation-budget parameters; recovery scheduling and parameterization are Level 3 policy responsibilities.
+
 ---
 
 ## 5. Failure Recovery Semantics (Inference-Time)
@@ -229,6 +231,8 @@ When failure is detected:
 | L4             | Increase retrieval k, bypass consolidation, force fresh write       |
 | L5             | Change abstraction granularity, suppress macro usage                |
 | L6             | Re-verify with stricter criteria, recalibrate confidence            |
+
+This table defines permissible actions, not decision authority: Level 6 diagnoses and routes credit, while Level 3 selects and parameterizes recovery actions.
 
 Recovery actions must be **parameterized by learned heads**, even if bounded by hard limits.
 

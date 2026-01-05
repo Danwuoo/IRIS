@@ -126,10 +126,11 @@ Some hard control may exist temporarily due to tooling or infrastructure limitat
 
 Such mechanisms **MUST** satisfy all of the following:
 
-1. Explicitly documented as *temporary technical debt*.
+1. Explicitly documented as *temporary technical debt*, including the intended learned replacement and a removal criterion.
 2. Isolated so they can be replaced by learned counterparts.
-3. Do not encode task-specific heuristics.
-4. Do not silently bias credit assignment across Levels.
+3. Non-binding under intended operation: hard control may only function as a guardrail (e.g., safety caps), not as routine policy (e.g., fixed beam size, fixed rollout depth, fixed termination rules).
+4. Do not encode task-specific heuristics.
+5. Do not silently bias credit assignment across Levels.
 
 Failure to label hard control as technical debt constitutes a **contract violation**.
 

@@ -39,6 +39,7 @@ They shape *how the system represents and corrects itself*, not *what answer it 
 
 * Level 5 influences **representation**, not control flow
 * Level 6 influences **learning pressure**, not execution logic
+* Level 6 outputs must not directly parameterize computation budget (e.g., beam size, rollout depth, retrieval count) or termination; those are Level 3 policy outputs
 * Neither level may:
 
   * Override decisions from Level 3
@@ -114,6 +115,7 @@ Construct or update macro-level tokens.
 **Hard Constraints**
 
 * Macro tokens must remain compatible with State IR
+* Macro tokens must not be treated as Program IR or executable subroutines; they may only influence Level 2 via the trunk's contextualization of the canonical State IR
 * Macro tokens must not encode control logic
 * Macro updates must be learnable and differentiable
 
@@ -221,6 +223,8 @@ Route diagnostic pressure to appropriate lower levels.
 **Hard Requirement**
 
 Routing must be **learned**, not rule-based.
+
+Credit routing is a diagnostic distribution. It must be consumed as evidence by Level 3 policies, not executed as direct control.
 
 ---
 

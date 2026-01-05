@@ -72,7 +72,7 @@ Allocate computational resources dynamically.
 
 * Contextualized State IR
 * Signals from Level 1 (uncertainty)
-* Signals from Level 6 (confidence, failure diagnostics)
+* Signals from Level 6 (confidence, failure diagnostics), treated as evidence rather than direct control
 
 **Output**
 
@@ -83,6 +83,8 @@ Allocate computational resources dynamically.
   * Retrieval count
   * Tool / module enablement
   * Stop / continue logits
+
+Only Level 3 may emit these compute-control parameters. Other levels may provide evidence, but must not directly set budgets or termination.
 
 **Requirements**
 

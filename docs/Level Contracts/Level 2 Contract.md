@@ -80,6 +80,7 @@ Provide a canonical latent representation for programs.
 * Program tokens must:
 
   * Share the same hidden dimension as State IR tokens
+  * Remain outside the canonical State IR sequence (`Z`); programs are not State IR tokens even if they share a latent space
   * Support compositional structure (sequence, tree, or graph)
 * Embedding must be learned
 * No hard-coded opcode semantics are permitted
@@ -148,8 +149,10 @@ Execute a program **within the neural system**, not outside it.
 
 **Allowed (Transitional Only)**
 
-* Limited hard control-flow (e.g., fixed unrolling depth)
+* Limited hard control-flow guardrails (e.g., a maximum unrolling depth cap), explicitly labeled as temporary technical debt
 * Minimal symbolic scaffolding *around* neural primitives
+
+Any transitional hard control must satisfy the constraints in **Routing, Gating, and Control Are Learnable** (Section 7).
 
 **Explicitly Forbidden**
 

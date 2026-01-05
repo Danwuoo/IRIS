@@ -82,11 +82,12 @@ This includes, but is not limited to:
 
 ### 3.2 Router ≠ If–Else
 
-- Hard-coded if–else logic is **not** an acceptable substitute for routing.
+- Hard-coded if/else logic is **not** an acceptable substitute for routing.
 - Rule-based branching may exist **only** as a temporary technical debt, and must be:
     - Clearly marked
     - Isolated
     - Designed to be removable
+    - Non-binding guardrail only; hard-coded policy (e.g., fixed beam size, fixed rollout depth, fixed termination rules) is forbidden
 
 If a decision influences *which computation happens*, it must ultimately be learnable.
 
