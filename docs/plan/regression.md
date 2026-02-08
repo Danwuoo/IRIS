@@ -58,6 +58,17 @@ In that case, the correct response is **to improve diagnostics**, not to waive r
 
 ---
 
+### 1.3 Pretraining-First Priority
+
+Regression prioritizes **process/diagnostic stability** over outcome gains:
+
+* Primary: failure attribution, credit routing, calibration, concept isolation, paired invariance
+* Secondary: task success rate / aggregate benchmark score
+
+If secondary improves while primary degrades, the change is rejected.
+
+---
+
 ## 2. Canonical Failure Taxonomy (Regression Keys)
 
 All regressions are indexed by the following canonical categories.
@@ -123,6 +134,7 @@ Minimum required coverage:
 * ARC-AGI-2 (core stress)
 * re-arc paired tasks (representation invariance)
 * ConceptARC (concept isolation)
+* arc-agi-benchmarking (probe/regression harness only)
 
 ### 3.2 Concept Axis
 
@@ -259,7 +271,29 @@ Either condition → **block**
 
 ---
 
-### 4.7 Resume Consistency Regression (Mandatory)
+### 4.7 Pretraining Diagnostics Regression (Mandatory)
+
+**Purpose**: Keep pretraining process metrics stable across updates.
+
+**Method**:
+
+* Compare before/after on:
+
+  * `failure.credit.collapse_rate`
+  * `eval.calibration_error`
+  * `prog.diversity`
+  * `search.termination_margin` (failure-masking checks)
+
+**Gate**:
+
+* Credit collapse rate increase beyond tolerance → **block**
+* Calibration degradation beyond tolerance → **block**
+* Program diversity collapse → **block**
+* Cost gain caused by failure masking → **block**
+
+---
+
+### 4.8 Resume Consistency Regression (Mandatory)
 
 **Purpose**: Prevent semantic drift between uninterrupted and resumed training.
 
@@ -288,6 +322,10 @@ Regression gates are **binary** unless explicitly marked otherwise.
 * Removal or bypass of a Level
 * Hard-coded control replacing learned routing
 * Verifier non-functional
+* Credit attribution collapse
+* Calibration degradation beyond tolerance
+* Concept leakage increase
+* Paired invariance regression
 
 ### 5.2 Soft Gates (Waivable with Justification)
 

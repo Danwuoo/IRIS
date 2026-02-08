@@ -1,21 +1,31 @@
-# Phase C — 最小模型 × 工具閉環（Minimal Model–Tool Closed Loop）
+# Phase C — 最小模型 × Pretraining 閉環（Minimal Model–Pretraining Closed Loop）
 
 ## 0. Phase 定位與目標
 
-Phase C 的目標是建立**第一個結構上正確、可被信用分配與診斷的最小可運行系統**，而非追求任務成功率。
+Phase C 的目標是建立**第一個結構上正確、可被信用分配與診斷的最小可運行預訓練系統**，而非追求任務成功率。
 
 本 Phase 必須完成：
 
 1. **模型主幹（Trunk）＋ Level 0–6 Head 的第一次實體落地**
 2. **State IR → Program → Execution → Verification → Credit Routing 的閉環**
-3. **工具（datasets / re-arc / NVARC）僅作為資料與擾動來源，不承擔推理權威**
+3. **資料採 multi-source（MiniARC / ARC-AGI / re-arc / ConceptARC）；工具只提供資料與擾動**
 4. **所有控制、路由、終止行為均可被 L3/L6 診斷與學習**
 
-> 成功標準不是「解得出 ARC 題」，
+> 成功標準不是「ARC 題成功率是否上升」，
 > 
 > 
-> 而是 **失敗時，系統知道「哪一層出了什麼類型的錯」**。
+> 而是 **失敗時，系統知道「哪一層出了什麼類型的錯」，且診斷分布可穩定被訓練**。
 > 
+
+### 0.1 Objective Priority（Phase C）
+
+* **Primary（主）**：process / diagnostic
+  * `failure taxonomy` 可重現
+  * `credit routing` 不 collapse
+  * `calibration` 不惡化
+  * `program diversity` / `macro usage` 可觀測且不崩潰
+* **Secondary（次）**：outcome（task success / benchmark score）
+  * 僅作 probe / regression，不作主要優化目標
 
 ---
 
@@ -198,16 +208,29 @@ State IR (Z)
 
 ### 6.1 Dataset 使用策略
 
-- `MiniARC`：必跑（smoke + regression）
-- `ARC-AGI-1`：小子集即可
-- `re_arc`：只用於 paired-task 或表示擾動
+- `MiniARC`：smoke + 快速迴圈
+- `ARC-AGI-1 / ARC-AGI-2`：一般化壓力來源（訓練/診斷用）
+- `re_arc`：paired invariance 與表示穩定性診斷
+- `ConceptARC`：concept isolation / leakage 診斷來源
 
 ### 6.2 工具定位（嚴格）
 
-- re-arc / NVARC：
-    - 只能產生 **輸入與變體**
-    - 不得提供正確性語義
-- 所有正誤、置信、診斷 → **只來自 L6**
+- re-arc / ConceptARC / arc-agi-benchmarking：
+    - 只能提供 **資料、擾動、probe 報表**
+    - 不得成為 runtime oracle 或控制策略來源
+- 所有正誤、置信、信用分配語義 → **只來自 L6 + L3 閉環**
+
+### 6.3 Evaluation Tracks（必分流）
+
+* **(a) Pretraining Diagnostics（主要）**
+  * failure taxonomy 分布
+  * credit routing 分布與 entropy
+  * uncertainty / calibration
+  * program diversity / macro usage
+* **(b) Probe / Regression（次要但 hard gate）**
+  * ConceptARC isolation / leakage
+  * re-arc paired invariance
+  * arc-agi-benchmarking regression harness
 
 ---
 
@@ -221,7 +244,12 @@ Phase C **通過**，需同時滿足：
 2. 移除任一 Level（L0–L6）會：
     - 破壞閉環
     - 或導致診斷語義崩潰
-3. 沒有任何 task-specific heuristic 被寫入 control code
+3. process/diagnostic gate 不退化：
+    - credit routing 不 collapse
+    - calibration 不惡化
+    - concept leakage 不上升
+    - paired invariance 不惡化
+4. 沒有任何 task-specific heuristic 被寫入 control code
 
 Phase C **失敗** 的典型徵象：
 

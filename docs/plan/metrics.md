@@ -45,16 +45,21 @@ Metrics describe **what is observed**, not **how learning happens**.
 
 All metrics fall into one of four classes:
 
-1. **Outcome Metrics** – Was the final result acceptable?
-2. **Failure Taxonomy Metrics** – *Why* did it fail, semantically?
-3. **Process / Diagnostic Metrics** – What happened internally?
-4. **Regression Gate Metrics** – Did a change violate invariants?
+1. **Outcome Metrics (Secondary)** – Was the final result acceptable?
+2. **Failure Taxonomy Metrics (Primary)** – *Why* did it fail, semantically?
+3. **Process / Diagnostic Metrics (Primary)** – What happened internally?
+4. **Regression Gate Metrics (Hard Gate)** – Did a change violate invariants?
 
 Only these four classes are permitted.
 
+Optimization priority is fixed:
+
+* **Primary**: Failure Taxonomy + Process/Diagnostic
+* **Secondary**: Outcome (success/score/cost)
+
 ---
 
-## 2. Outcome Metrics (Global)
+## 2. Outcome Metrics (Global, Secondary)
 
 ### 2.1 Task-Level Outcome
 
@@ -68,6 +73,7 @@ Only these four classes are permitted.
 
 * `task.success` MUST be derived from verifier logic, not dataset labels directly.
 * Confidence MUST be separable from correctness.
+* Outcome metrics are probe signals; they are not the primary pretraining objective.
 
 ---
 
@@ -230,7 +236,27 @@ Hard attribution (single Level) is **not allowed**.
 
 ---
 
-## 5. ConceptARC-Specific Metrics
+## 5. Pretraining-Primary Process Metrics
+
+### 5.1 Primary Gate Signals (Pretraining-First)
+
+| Metric                                | Type  | Gate Intent                             |
+| ------------------------------------- | ----- | --------------------------------------- |
+| `failure.credit.collapse_rate`        | float | Credit routing must not collapse        |
+| `eval.calibration_error`              | float | Calibration must not degrade            |
+| `prog.diversity`                      | float | Program proposal diversity must persist |
+| `concept.leakage_score`               | float | Concept leakage must not increase       |
+| `paired.invariance.gap`               | float | Paired invariance must not worsen       |
+| `search.termination_margin`           | float | Avoid failure-masking early stop        |
+| `process.failure_distribution_entropy`| float | Keep failure diagnostics informative    |
+
+### 5.2 Priority Rule
+
+If an update improves outcome metrics but worsens any primary gate signal, it is treated as **regression**.
+
+---
+
+## 6. ConceptARC-Specific Metrics
 
 ConceptARC is treated as a **diagnostic instrument**, not a leaderboard.
 
@@ -249,7 +275,7 @@ Regression is defined as **worsening isolation or increased leakage**, even if g
 
 ---
 
-## 6. Regression Gate Metrics (Phase-Blocking)
+## 7. Regression Gate Metrics (Phase-Blocking)
 
 Regression gates are **hard checks** evaluated after any architecture or training change.
 
@@ -258,10 +284,12 @@ Regression gates are **hard checks** evaluated after any architecture or trainin
 A change is **blocked** if ANY of the following hold:
 
 1. Any failure category rate increases by > ε without compensating decrease elsewhere
-2. `eval.calibration_error` increases monotonically
-3. ConceptARC leakage increases for any stable concept bucket
-4. Credit attribution collapses to a single Level across tasks
-5. Cost decreases only by masking failures (e.g., early termination)
+2. `failure.credit.collapse_rate` increases beyond configured tolerance
+3. `eval.calibration_error` increases monotonically or exceeds tolerance to baseline
+4. ConceptARC leakage increases for any stable concept bucket
+5. re-arc paired invariance gap increases
+6. Cost decreases only by masking failures (e.g., early termination)
+7. Any benchmark probe improves while primary process gates regress
 
 ε is project-defined but MUST be fixed per phase.
 
@@ -280,7 +308,7 @@ No silent passes are allowed.
 
 ---
 
-## 7. Logging and Storage Requirements
+## 8. Logging and Storage Requirements
 
 * All metrics MUST be serializable (JSON/YAML)
 * Per-attempt logs MUST include:
@@ -293,7 +321,7 @@ No silent passes are allowed.
 
 ---
 
-## 8. Final Invariants
+## 9. Final Invariants
 
 * No metric may bypass Level identity
 * No failure may be recorded without a taxonomy code

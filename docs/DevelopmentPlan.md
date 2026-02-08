@@ -10,7 +10,8 @@
 
 * 保證所有開發行為 **不違反既有規範與合約**
 * 提供一條 **可增量推進、可回歸、可診斷** 的工程主線
-* 將「工具 / benchmark / 資料」重新定位為 **診斷與壓測儀器**，而非智慧來源
+* 以 **pretraining-first** 推進 IRIS：development/training 分離、multi-source pretraining
+* 將 benchmark 重新定位為 **probe / regression**，而非主優化目標或智慧來源
 
 本文件 **不承載實作細節**。
 每個 Phase 的具體內容、接口、實驗策略，均放在：
@@ -18,6 +19,12 @@
 ```
 docs/plan/phase_*.md
 ```
+
+### 0.1 Pretraining-First 的計畫語義
+
+* `training` 的主目標是穩定內部行為分布（failure taxonomy、credit routing、calibration、program diversity、macro usage）。
+* `development` 的主目標是讓改動可被診斷與回歸比較，不以單一 benchmark score 作為決策依據。
+* `benchmark` 僅回答「有沒有退化」，不回答「是否已達最終能力上限」。
 
 ---
 
@@ -92,7 +99,7 @@ docs/plan/phase_*.md
 | ----- | ----------------------------- | ------- |
 | A     | Failure / Verifier / Trace 基建 | 否       |
 | B     | 工具改造（NVARC / re-arc）          | 否       |
-| C     | 最小模型 × 工具閉環                   | 否       |
+| C     | 最小模型 × pretraining 閉環           | 否       |
 | D     | ConceptARC 作為診斷儀器             | 否       |
 | E     | 官方 benchmark 作為回歸 harness     | 是（策略留白） |
 
@@ -138,6 +145,19 @@ docs/plan/phase_*.md
 
 * Training runs must support resume with semantic consistency between uninterrupted and resumed paths.
 * Checkpoints are written only at segment boundaries; restart replays any pending segment to preserve exactly-once apply semantics.
+
+---
+
+### 3.5 Pretraining Objective Priority (Always-On)
+
+* **Primary（主）**：process / diagnostic 指標
+
+  * credit routing 不 collapse
+  * calibration 不惡化
+  * program diversity 不崩潰
+  * macro usage 與 failure attribution 可觀測
+* **Secondary（次）**：outcome 指標（success / score / cost）
+* 若 secondary 改善但 primary 退化，視為 regression。
 
 ---
 
@@ -202,7 +222,7 @@ Phase 結束必須產出：
 
 ---
 
-### Phase C — 最小模型 × 工具閉環
+### Phase C — 最小模型 × Pretraining 閉環
 
 * **核心約束**
 
@@ -216,6 +236,7 @@ Phase 結束必須產出：
 * **目標**
 
   * 一條完整「失敗 → 診斷 → recovery」閉環
+  * 以 pretraining diagnostics 驅動迭代，而非 ARC 單一成功率
 
 ---
 
@@ -241,7 +262,7 @@ Phase 結束必須產出：
   * `tools/arc-agi-benchmarking/`
 * **定位**
 
-  * parser / verifier supervision / regression harness
+  * parser / adapter / regression harness
 * **目標**
 
   * benchmark 只回答「是否退化」，不回答「是否聰明」
