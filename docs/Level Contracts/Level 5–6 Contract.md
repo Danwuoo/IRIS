@@ -1,331 +1,84 @@
-# Level 5–6 Contract
+# Level 5-6 Contract
 
-**Abstraction Management, Self-Monitoring, and Meta-Credit Assignment**
+**Self-Evaluation, Recovery Policy, and Credit Attribution Hooks**
 
 ---
 
 ## 0. Scope and Intent
 
-This document defines the **exclusive responsibilities, authority boundaries, and invariants** of **Level 5** and **Level 6**.
+This document defines the contract for Level 5-6 as the learned self-evaluation
+and recovery-attribution layer.
 
-Together, these levels are responsible for:
+- Level 5 focuses on evaluation and verification signal quality.
+- Level 6 focuses on recovery policy hooks and credit-assignment integration.
 
-* Managing **abstraction granularity over time**
-* Monitoring system behavior and outcomes
-* Routing **credit, blame, and revision pressure** across lower levels
-
-They operate at the **meta-representational** and **meta-evaluative** layer of the system.
-
-Critically:
-
-* Level 5–6 **do not solve tasks**
-* Level 5–6 **do not plan**
-* Level 5–6 **do not introduce symbolic oversight**
-
-They shape *how the system represents and corrects itself*, not *what answer it produces*.
+Both levels must remain learned, observable, and attribution-compatible.
 
 ---
 
-## 1. Architectural Positioning
+## Authority & Optional Mounting
 
-### 1.1 Role Separation
-
-| Level   | Primary Role             | Core Question Answered                                   |
-| ------- | ------------------------ | -------------------------------------------------------- |
-| Level 5 | Abstraction management   | “At what granularity should the system think?”           |
-| Level 6 | Self-monitoring & credit | “What went wrong, and where should pressure be applied?” |
-
-### 1.2 Authority Boundaries
-
-* Level 5 influences **representation**, not control flow
-* Level 6 influences **learning pressure**, not execution logic
-* Level 6 outputs must not directly parameterize computation budget (e.g., beam size, rollout depth, retrieval count) or termination; those are Level 3 policy outputs
-* Neither level may:
-
-  * Override decisions from Level 3
-  * Rewrite programs from Level 2
-  * Inject domain knowledge
+- This document defines a **Level Interface Contract**, not a fixed implementation or fixed capacity requirement.
+- **Interface must exist**: even when this level is disabled in a checkpoint/config, its interface and I/O schema must remain available as a stub (no-op or low-capacity adapter).
+- **Implementation may be mounted/disabled/replaced**: any mounted version must satisfy this contract (I/O consistency, observability, and credit attribution compatibility).
+- Hard-orchestrated flow cannot replace learned control. If this level emits control/recovery signals, those signals must be learnable, trainable, and attributable.
 
 ---
 
-## 2. Level 5 Contract: Abstraction Management
+## 1. Responsibilities
 
-### 2.1 Functional Responsibility
-
-Level 5 governs **when and how the system shifts abstraction levels**, including:
-
-* Aggregating fine-grained events into macro concepts
-* Deciding whether to reason at:
-
-  * Micro (object / event)
-  * Meso (patterns / transformations)
-  * Macro (summaries / schemas)
-
-Level 5 does **not** create programs or concepts explicitly; it **modulates representation granularity**.
+- Emit learned self-evaluation signals, including uncertainty and failure tags.
+- Provide repair suggestions and credit-assignment hints as learned outputs.
+- Support recovery policy without collapsing into hardcoded retry scripts.
 
 ---
 
-### 2.2 Mandatory Level 5 Modules
+## 2. Interface
 
-All Level 5 implementations **must include** the following learned modules.
+### Inputs
 
----
+- `state_in`: canonical State IR (or schema-compatible reference/slice).
+- `context_in`: optional external context, including behavior trace/output summary.
+- `control_in`: optional upstream control signals.
+- `resource_budget`: optional limits (time/steps/memory).
 
-#### 2.2.1 Macro Selector
+### Outputs
 
-**Purpose**
-Decide whether abstraction should be introduced or refined.
+- `state_out`: State IR updates with evaluation summary and credit hints.
+- `control_out`: retry/reflect/branch gate logits or equivalent learned recovery suggestions (optional).
+- `diagnostics`: confidence/uncertainty, failure tags, credit hints, error signatures, and recovery recommendation summary.
 
-**Input**
+### Stub Behavior (when disabled)
 
-* Contextualized State IR
-* Event and object token trajectories
-* Signals from Level 3 (search pressure)
+- `state_out = state_in` (or minimal schema normalization only).
+- `control_out` returns neutral/no-op.
+- `diagnostics` must still emit a disabled marker and basic summary stats.
 
-**Output**
+### Observability & Logging (minimum)
 
-* Soft gates indicating:
-
-  * Whether to form macro representations
-  * Preferred abstraction scale
-
-**Requirements**
-
-* Decisions must be probabilistic
-* Must be reversible
-* Must tolerate being ignored by downstream routing
+- Must support sampled logging of verification/recovery summaries, key gates/logits (if present), and failure/error codes (if present).
+- Attribution must be traceable to trunk contribution and this level contribution, including stub mode.
 
 ---
 
-#### 2.2.2 Macro Updater
+## 3. Prohibited Patterns
 
-**Purpose**
-Construct or update macro-level tokens.
-
-**Input**
-
-* Aggregated object and event representations
-* Existing macro tokens (if any)
-
-**Output**
-
-* New or updated macro tokens (M)
-* Or gated no-op
-
-**Hard Constraints**
-
-* Macro tokens must remain compatible with State IR
-* Macro tokens must not be treated as Program IR or executable subroutines; they may only influence Level 2 via the trunk's contextualization of the canonical State IR
-* Macro tokens must not encode control logic
-* Macro updates must be learnable and differentiable
+- Hardcoded "if wrong then rerun N times" as default semantics.
+- Rule-only verifier behavior that bypasses learned evaluation.
+- Fixed recovery flowcharts replacing learned policy.
+- Benchmark-shaped acceptance/rejection policy in contract semantics.
 
 ---
 
-### 2.3 Forbidden Shortcuts (Level 5)
+## 4. Compliance Checklist
 
-Level 5 **must not**:
-
-* Hard-code abstraction rules
-* Collapse all reasoning into macros
-* Encode symbolic schemas or templates
-* Force macro usage downstream
-
-If disabling macro tokens does not degrade performance over time, Level 5 is under-specified.
+1. Is the interface preserved even when disabled (with a valid stub)?
+2. In disabled mode, does State IR remain consistent and unbroken?
+3. Is there any semantic closed loop bypassing trunk (violation)?
+4. Is minimum observability/diagnostics provided?
+5. If control/routing signals exist, are they learned, trainable, and attributable?
+6. Is any benchmark-specific assumption embedded in contract semantics?
 
 ---
 
-## 3. Level 6 Contract: Self-Monitoring and Meta-Credit
-
-### 3.1 Functional Responsibility
-
-Level 6 provides the system’s **internal evaluation and diagnosis layer**.
-
-It is responsible for:
-
-* Verifying candidate outcomes
-* Estimating confidence and calibration
-* Routing credit and blame signals to lower levels
-
-Level 6 answers **“how trustworthy is this process?”**, not **“is this answer correct by definition?”**.
-
----
-
-### 3.2 Mandatory Level 6 Modules
-
----
-
-#### 3.2.1 Verifier Head
-
-**Purpose**
-Evaluate candidate solutions or executions.
-
-**Input**
-
-* Candidate outputs
-* Execution traces
-* Contextualized State IR
-
-**Output**
-
-* Validity scores
-* Violation-type logits (optional but recommended)
-
-**Requirements**
-
-* Fully learned
-* Task-agnostic in structure
-* No hard-coded correctness rules
-
----
-
-#### 3.2.2 Confidence / Calibration Head
-
-**Purpose**
-Estimate confidence in the current best candidate.
-
-**Input**
-
-* Verifier outputs
-* Search and cost signals
-* Trunk representations
-
-**Output**
-
-* Calibrated confidence score
-
-**Notes**
-
-* Confidence must be separable from correctness
-* Used downstream by Level 3 for termination
-
----
-
-#### 3.2.3 Credit Router
-
-**Purpose**
-Route diagnostic pressure to appropriate lower levels.
-
-**Input**
-
-* Failure patterns
-* Low-confidence signals
-* Execution and search traces
-
-**Output**
-
-* Soft preference over:
-
-  * Re-running perception (Level 0)
-  * Increasing rollout (Level 1)
-  * Expanding program space (Level 2)
-  * Increasing retrieval (Level 4)
-
-**Hard Requirement**
-
-Routing must be **learned**, not rule-based.
-
-Credit routing is a diagnostic distribution. It must be consumed as evidence by Level 3 policies, not executed as direct control.
-
----
-
-## 4. Interaction Between Level 5 and Level 6
-
-* Level 6 may:
-
-  * Influence future abstraction pressure indirectly
-* Level 5 may:
-
-  * Alter representations consumed by verification
-
-Neither level may directly command the other.
-
-All interaction is mediated through **explicit tokens and soft signals**.
-
----
-
-## 5. Input / Output Semantic Contract
-
-### 5.1 Input Assumptions
-
-Level 5–6 must assume:
-
-* Representations may be misleading
-* Programs may succeed for the wrong reasons
-* Verification signals may be noisy or delayed
-
-### 5.2 Output Guarantees
-
-Level 5–6 must guarantee:
-
-* No irreversible decisions
-* No hidden evaluators
-* No silent failure masking
-
-All outputs must be visible and consumable by other levels.
-
----
-
-## 6. Training and Credit Assignment Assumptions
-
-* Level 5–6 are trained via:
-
-  * Long-horizon outcomes
-  * Efficiency and robustness metrics
-  * Failure recovery behavior
-* Supervision is:
-
-  * Sparse
-  * Delayed
-  * Often indirect
-
-Therefore:
-
-* Modules must be stable under weak gradients
-* Outputs must be smooth and non-brittle
-* Overconfidence must be penalizable
-
----
-
-## 7. Forbidden Failure Modes
-
-Level 5–6 must **not collapse into**:
-
-* Hand-written abstraction rules
-* Symbolic verifiers
-* Post-hoc confidence heuristics
-* Manual credit assignment logic
-
-If Level 6 decisions can be replicated with if-else rules, the design is invalid.
-
----
-
-## 8. Explicit Non-Goals (Level 5–6)
-
-Level 5–6 are **explicitly not**:
-
-* Oracles
-* Truth judges
-* Planners
-* Debuggers for human inspection
-
-They are **internal regulators**, not external authorities.
-
----
-
-## 9. Stability and Evolution Clause
-
-Future versions may:
-
-* Improve abstraction smoothness
-* Enhance calibration quality
-* Refine credit routing granularity
-
-Future versions may **not**:
-
-* Introduce symbolic oversight
-* Centralize control in Level 5–6
-* Remove learnability or differentiability
-
----
-
-**End of Level 5–6 Contract**
+**End of Level 5-6 Contract**

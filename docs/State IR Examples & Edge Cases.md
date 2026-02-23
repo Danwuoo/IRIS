@@ -2,7 +2,7 @@
 
 **(Normative Companion to “State IR Canonical Spec”)**
 
-This document provides concrete examples, pathological cases, and explicit boundary conditions for the **State IR** used across all Levels and the Mamba Trunk.
+This document provides concrete examples, pathological cases, and explicit boundary conditions for the **State IR** used across all Levels and the Single Trunk.
 Its purpose is to prevent silent drift, implicit token invention, or heuristic shortcuts by agents or future contributors.
 
 This document is **normative**: if an example here contradicts an implementation, the implementation is incorrect.
@@ -366,7 +366,7 @@ An implementation is **State IR compliant** iff:
 * Depends on: **State IR Canonical Spec**
 * Constrains: **All Level Contracts**
 * Enforced by: **Core Invariants & Non-Negotiables**
-* Assumed by: **Mamba Trunk Contract**
+* Assumed by: **Single Trunk Contract**
 
 ---
 

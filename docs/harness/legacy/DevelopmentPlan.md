@@ -14,11 +14,9 @@
 * 將 benchmark 重新定位為 **probe / regression**，而非主優化目標或智慧來源
 
 本文件 **不承載實作細節**。
-每個 Phase 的具體內容、接口、實驗策略，均放在：
-
-```
-docs/plan/phase_*.md
-```
+舊版 `docs/plan/phase_*.md` 已退役；本文件僅保留歷史規劃語義，搭配
+`docs/harness/legacy/metrics.md` 與 `docs/harness/legacy/regression.md`
+作為 legacy 參考。
 
 ### 0.1 Pretraining-First 的計畫語義
 
@@ -40,8 +38,8 @@ docs/plan/phase_*.md
 
 **核心原則摘要（非替代原文）**
 
-* 唯一大容量 trunk（SSM/Mamba）
-* 所有 Level（L0–L6）必須存在於權重拓撲中
+* 唯一大容量 single trunk（architecture-agnostic）
+* 所有 Level（L0–L6）接口必存在；實作可關閉但 stub 不可移除
 * routing / gating / control 必須可學，不得落入 if–else
 * 不得以工具或 symbolic executor 取代 Level 2/3/6 的責任
 
@@ -134,10 +132,10 @@ docs/plan/phase_*.md
 
 > **「我修了 A，是否悄悄毀了 B？」**
 
-* regression 定義與流程集中於：
+* regression 定義與流程集中於（legacy 參考）：
 
-  * `docs/plan/regression.md`
-  * `docs/plan/metrics.md`
+  * `docs/harness/legacy/regression.md`
+  * `docs/harness/legacy/metrics.md`
 
 ---
 
@@ -195,8 +193,8 @@ Phase 結束必須產出：
   * Routing, Gating, and Control Are Learnable
 * **新增產出**
 
-  * `docs/plan/metrics.md`
-  * `docs/plan/regression.md`
+  * `docs/harness/legacy/metrics.md`
+  * `docs/harness/legacy/regression.md`
 * **目標**
 
   * 沒有「不知道怎麼錯」的 case
@@ -207,7 +205,7 @@ Phase 結束必須產出：
 
 * **核心引用**
 
-  * `docs/工具、benchmark 去官方化.md`
+  * `docs/System Invariants & Non-Negotiables.md`（Benchmark and tooling are instrumentation）
 * **工具角色**
 
   * NVARC：conditional failure amplifier
@@ -247,7 +245,7 @@ Phase 結束必須產出：
   * `tools/ConceptARC/`
 * **新增**
 
-  * `docs/plan/conceptarc_buckets.md`
+  * concept bucket 分類（實驗資產；不作為主線 contract）
   * `src/eval/conceptarc/`
 * **目標**
 

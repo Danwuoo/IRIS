@@ -1,301 +1,85 @@
 # Level 2 Contract
 
-**Program Induction, Proposal, and Neural Execution Layer**
+**Latent Procedure Induction and Mid-Level Program Structure**
 
 ---
 
 ## 0. Scope and Intent
 
-This document defines the **exclusive responsibilities, guarantees, and prohibitions** of **Level 2**.
+This document defines the contract for Level 2 as a benchmark-agnostic, learned
+procedure layer.
 
-Level 2 is the system’s **program induction layer**. Its role is to:
-
-* Propose **structured, reusable procedural hypotheses**
-* Execute those hypotheses **inside the neural substrate**
-* Score and expose their outcomes to higher-level controllers
-
-Level 2 is the **first layer allowed to reason over structure**, but it is **not allowed to externalize that structure into hard symbolic control**.
-
-Any implementation that turns Level 2 into a hand-written DSL executor, rule engine, or planner is considered **architecturally invalid**, regardless of performance.
+Level 2 is responsible for inducing reusable latent procedures from State IR and
+providing structured intermediate reasoning signals without collapsing into a
+handwritten solver.
 
 ---
 
-## 1. Architectural Positioning
+## Authority & Optional Mounting
 
-### 1.1 Role in the Stack
-
-* Level 2 sits **above**:
-
-  * Perception and dynamics (Level 0–1)
-* Level 2 sits **below**:
-
-  * Meta-search, budget control, and termination (Level ≥3)
-
-Level 2 **does not own**:
-
-* Search depth
-* Resource allocation
-* Stopping criteria
-* Memory policy
-
-It **does own**:
-
-* Program hypothesis space
-* Program representation
-* Program-conditioned state transformation
+- This document defines a **Level Interface Contract**, not a fixed implementation or fixed capacity requirement.
+- **Interface must exist**: even when this level is disabled in a checkpoint/config, its interface and I/O schema must remain available as a stub (no-op or low-capacity adapter).
+- **Implementation may be mounted/disabled/replaced**: any mounted version must satisfy this contract (I/O consistency, observability, and credit attribution compatibility).
+- Hard-orchestrated flow cannot replace learned control. If this level emits control/recovery signals, those signals must be learnable, trainable, and attributable.
 
 ---
 
-## 2. Definition of “Program” (Canonical Meaning)
+## 1. Responsibilities
 
-Within this system, a **program** is defined as:
+- Induce latent procedure candidates from canonical State IR.
+- Emit reusable mid-level structure (for example subgoal sketches, constraint bundles, or action schemas in latent form).
+- Support downstream control without forcing deterministic execution flow.
 
-> A **learned, structured, tokenized procedure** that maps a State IR to another State IR (or to an answer token), whose semantics are *partially invariant across tasks*.
-
-A program is **not required** to be:
-
-* Human-readable
-* Deterministic
-* Symbolically interpretable
-
-A program **must be**:
-
-* Represented as tokens
-* Embedded in the same latent space as State IR
-* Executable by neural operators
+Level 2 must remain learned and differentiable in semantics. It must not become
+an externalized symbolic engine.
 
 ---
 
-## 3. Mandatory Level 2 Modules
+## 2. Interface
 
-All Level 2 implementations **must include** the following **weight-bearing** modules.
+### Inputs
 
-### 3.1 Program IR Embedding
+- `state_in`: canonical State IR (or schema-compatible reference/slice).
+- `context_in`: optional external context.
+- `control_in`: optional decomposition/control hints.
+- `resource_budget`: optional limits (time/steps/memory).
 
-**Purpose**
-Provide a canonical latent representation for programs.
+### Outputs
 
-**Requirements**
+- `state_out`: State IR augmented with latent procedure candidates/program-like tokens.
+- `control_out`: optional decomposition suggestions (non-binding, non-hardcoded).
+- `diagnostics`: confidence/uncertainty, failure tags, credit hints, plus program quality signals (for example diversity, collapse indicators, consistency scores).
 
-* Program tokens must:
+### Stub Behavior (when disabled)
 
-  * Share the same hidden dimension as State IR tokens
-  * Remain outside the canonical State IR sequence (`Z`); programs are not State IR tokens even if they share a latent space
-  * Support compositional structure (sequence, tree, or graph)
-* Embedding must be learned
-* No hard-coded opcode semantics are permitted
+- `state_out = state_in` (or minimal schema normalization only).
+- `control_out` returns neutral/no-op.
+- `diagnostics` must still emit a disabled marker and basic summary stats.
 
-**Forbidden**
+### Observability & Logging (minimum)
 
-* Fixed symbolic AST without learned embeddings
-* String-based or text-only programs without neural grounding
-
----
-
-### 3.2 Program Proposal Head
-
-**Purpose**
-Generate candidate procedural hypotheses.
-
-**Input**
-
-* Contextualized State IR ( \tilde{Z} )
-* Task and global tokens
-
-**Output**
-
-* A bounded set of candidate programs:
-  [
-  { P_1, P_2, \dots, P_K }
-  ]
-
-**Requirements**
-
-* Proposal must be:
-
-  * Probabilistic
-  * Learnable
-  * Conditioned on State IR
-* Program length must be bounded but flexible
-* Beam size (K) is externally controlled (not internal logic)
-
-**Forbidden**
-
-* Deterministic rule enumeration
-* Hard-coded templates tied to specific domains
-* If-else trees masquerading as “programs”
+- Must support sampled logging of candidate summaries, scoring summaries, key gates/logits (if present), and failure/error codes (if present).
+- Attribution must be traceable to trunk contribution and this level contribution, including stub mode.
 
 ---
 
-### 3.3 Neural Primitive Executor
+## 3. Prohibited Patterns
 
-**Purpose**
-Execute a program **within the neural system**, not outside it.
-
-**Input**
-
-* Program tokens (P_i)
-* State IR tokens (Z)
-
-**Output**
-
-* Updated State IR (Z') or output candidate tokens
-
-**Hard Requirements**
-
-* Core execution **must occur in learned operators**
-* Primitive selection, matching, and parameterization must be differentiable
-* Execution must expose intermediate representations to gradients
-
-**Allowed (Transitional Only)**
-
-* Limited hard control-flow guardrails (e.g., a maximum unrolling depth cap), explicitly labeled as temporary technical debt
-* Minimal symbolic scaffolding *around* neural primitives
-
-Any transitional hard control must satisfy the constraints in **Routing, Gating, and Control Are Learnable** (Section 7).
-
-**Explicitly Forbidden**
-
-* Pure symbolic DSL interpreters
-* Deterministic rule engines
-* “Neural proposer + symbolic executor” split
-
-If the executor can be replaced by a Python function without changing learned behavior, the implementation is invalid.
+- Handwritten DSL executor as primary semantics.
+- Fixed search policy/flowchart embedded in this level.
+- Rule-only planner behavior replacing learned procedure induction.
+- Benchmark-shaped latent schema assumptions.
 
 ---
 
-### 3.4 Program Scorer / Value Head
+## 4. Compliance Checklist
 
-**Purpose**
-Provide an internal assessment of program quality.
-
-**Input**
-
-* Program representation
-* Execution result representations
-
-**Output**
-
-* Scalar or vector scores
-
-**Notes**
-
-* Scores are **not decisions**
-* They are signals for:
-
-  * Reranking
-  * Search control
-  * Credit assignment
-
----
-
-## 4. Input / Output Semantic Contract
-
-### 4.1 Input Assumptions
-
-Level 2 must assume:
-
-* State IR is incomplete and uncertain
-* Programs may fail, partially succeed, or be ill-posed
-* Multiple incompatible programs may coexist
-
-### 4.2 Output Guarantees
-
-Level 2 must guarantee:
-
-* Outputs are explicit tokens
-* No hidden mutable state exists outside tokens
-* Execution effects are visible to:
-
-  * Level 3 (search control)
-  * Level 6 (verification and credit)
-
----
-
-## 5. Relationship to Search and Control
-
-### 5.1 What Level 2 Does NOT Control
-
-Level 2 **must not decide**:
-
-* How many programs to propose
-* How deep to search
-* When to stop
-* Whether to retry or backtrack
-
-Those decisions belong to **Level 3 and above**.
-
-### 5.2 What Level 2 MUST Support
-
-Level 2 **must support**:
-
-* Partial execution
-* Aborted execution
-* Reuse of programs across states
-* Scoring without commitment
-
----
-
-## 6. Training and Credit Assignment Assumptions
-
-* Level 2 is trained via:
-
-  * Downstream task success
-  * Verification feedback
-  * Comparative program scoring
-* Gradients may arrive:
-
-  * Late
-  * Sparse
-  * Indirectly via higher levels
-
-Therefore:
-
-* Program representations must be stable
-* Executors must be robust to noisy supervision
-* Proposal diversity is preferred over early convergence
-
----
-
-## 7. Forbidden Failure Modes
-
-Level 2 must **not collapse into**:
-
-* A planner encoded as weights
-* A heuristic rule set
-* A symbolic solver wrapped in neural I/O
-* A single monolithic “reasoning head”
-
-If removing Level 3 reduces Level 2 to a complete solver, the design is incorrect.
-
----
-
-## 8. Explicit Non-Goals (Level 2)
-
-Level 2 is **explicitly not**:
-
-* A full agent controller
-* A search algorithm
-* A symbolic programming language
-* A human-readable reasoning trace generator
-
-Interpretability is optional; **neural executability is mandatory**.
-
----
-
-## 9. Stability and Evolution Clause
-
-Future versions may:
-
-* Improve program representations
-* Increase executor expressiveness
-* Reduce remaining hard control
-
-Future versions may **not**:
-
-* Remove neural execution
-* Externalize logic into symbolic code
-* Collapse Level 2 into Level 3 or vice versa
+1. Is the interface preserved even when disabled (with a valid stub)?
+2. In disabled mode, does State IR remain consistent and unbroken?
+3. Is there any semantic closed loop bypassing trunk (violation)?
+4. Is minimum observability/diagnostics provided?
+5. If control/routing signals exist, are they learned, trainable, and attributable?
+6. Is any benchmark-specific assumption embedded in contract semantics?
 
 ---
 
