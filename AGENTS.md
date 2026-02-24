@@ -33,14 +33,15 @@ These are binding. If your change would violate any item above, **do not impleme
 
 ---
 
-## 2) Legacy Planning References (Required When Task Touches Planning/Eval Policy)
+## 2) Legacy Planning and Phase Policy References (Required When Task Touches Planning/Eval Policy)
 If your task mentions or implies work on planning, evaluation policy, metrics, or regression process, you MUST read:
 
-- `docs/harness/legacy/DevelopmentPlan.md` (legacy phase definitions and gates)
+- `docs/harness/legacy/phase-gate-policy.md` (legacy phase definitions, gate activation, promotion rules)
 - `docs/harness/legacy/metrics.md` (legacy metrics vocabulary and gates)
 - `docs/harness/legacy/regression.md` (legacy regression harness policy)
 
 Notes:
+- `docs/harness/legacy/DevelopmentPlan.md` is retired and replaced by `docs/harness/legacy/phase-gate-policy.md`.
 - `docs/plan/phase_A.md` to `docs/plan/phase_E.md` are no longer active mainline documents.
 - Legacy documents are reference material and do not override Section 1 normative contracts.
 
@@ -117,6 +118,8 @@ Use the failure taxonomy / metrics vocabulary; do not invent new labels ad hoc. 
 - Phase D: ConceptARC as diagnostic harness; output isolation/leakage/attribution metrics (not leaderboard tuning). :contentReference[oaicite:58]{index=58}
 - Phase E: arc-agi-benchmarking as regression & verifier harness; no benchmark hacks. :contentReference[oaicite:59]{index=59}
 
+Phase definitions, suite activation states, and promotion requirements are governed by `docs/harness/legacy/phase-gate-policy.md`.
+
 ### 5.3 Regression Discipline (Always-On)
 Any architectural/training/eval-impacting change must:
 - Preserve the regression harness expectations and artifacts.
@@ -142,7 +145,7 @@ If you must introduce a hard cap (e.g., max steps), you MUST:
 
 ## 8) Minimal Completion Checklist (Attach to Each PR/Change)
 You must include:
-- Which mandatory docs you consulted (Section 1 + any Phase docs from Section 2).
+- Which mandatory docs you consulted (Section 1 + all relevant Section 2 policy docs).
 - The change class (refactor / targeted fix / expansion).
 - The expected failure-category impact (using canonical metrics).
 - Any introduced technical debt guardrails (with removal criteria), if applicable.

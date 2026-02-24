@@ -5,6 +5,7 @@
 **Status:** Canonical (Project-internal, non-normative but binding)
 **Audience:** Model / Tool / Evaluation / Training Pipeline
 **Applies to:** Phase A–E (Always-On)
+**Phase policy source:** `docs/harness/legacy/phase-gate-policy.md`
 
 ---
 
@@ -278,6 +279,7 @@ Regression is defined as **worsening isolation or increased leakage**, even if g
 ## 7. Regression Gate Metrics (Phase-Blocking)
 
 Regression gates are **hard checks** evaluated after any architecture or training change.
+Gate activation state (`ON` / `OBSERVE` / `OFF`) is determined by `docs/harness/legacy/phase-gate-policy.md`.
 
 ### 6.1 Mandatory Gates
 
@@ -291,7 +293,8 @@ A change is **blocked** if ANY of the following hold:
 6. Cost decreases only by masking failures (e.g., early termination)
 7. Any benchmark probe improves while primary process gates regress
 
-ε is project-defined but MUST be fixed per phase.
+ε is project-defined and MUST be fixed per phase via the active tolerance profile
+defined by `docs/harness/legacy/phase-gate-policy.md`.
 
 ---
 
@@ -303,6 +306,8 @@ regression.violations = [
   { metric, delta, phase, suspected_level }
 ]
 ```
+
+`phase` MUST be one of `A|B|C|D|E` and MUST match the active run profile.
 
 No silent passes are allowed.
 

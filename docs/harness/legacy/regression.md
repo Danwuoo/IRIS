@@ -26,6 +26,9 @@ This document is subordinate only to:
 * Credit Assignment & Failure Recovery Model
 * Routing, Gating, and Control Are Learnable
 
+Phase IDs, suite activation states, and promotion rules are sourced from
+`docs/harness/legacy/phase-gate-policy.md`.
+
 ---
 
 ## 1. Regression Philosophy (Non-Negotiable)
@@ -161,6 +164,9 @@ For each Level (L0–L6):
 ---
 
 ## 4. Required Regression Suites
+
+In this section, "Mandatory" means mandatory once activated by the current phase
+profile in `docs/harness/legacy/phase-gate-policy.md`.
 
 ### 4.1 Smoke Regression (Mandatory, Fast)
 
@@ -316,6 +322,9 @@ Either condition → **block**
 Regression gates are **binary** unless explicitly marked otherwise.
 
 ### 5.1 Hard Gates (Non-Waivable)
+
+Hard gates apply when their corresponding suites/metrics are in `ON` state for
+the current phase profile.
 
 * System invariant violation
 * Token schema drift

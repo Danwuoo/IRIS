@@ -20,7 +20,7 @@ C:.
 |   |   
 |   +---harness
 |   |   \---legacy
-|   |       |   DevelopmentPlan.md
+|   |       |   phase-gate-policy.md
 |   |       |   metrics.md
 |   |       |   regression.md
 |   +---Level Contracts
