@@ -7,6 +7,7 @@ C:.
 |   
 +---docs
 |   |   Credit Assignment & Failure Recovery Model.md
+|   |   Data Mixture & Ingestion Specification.md
 |   |   Pretraining Objective Spec.md
 |   |   repo-tree.txt
 |   |   Routing, Gating, and Control Are Learnable.md
@@ -20,8 +21,8 @@ C:.
 |   |   
 |   +---harness
 |   |   \---legacy
-|   |       |   phase-gate-policy.md
 |   |       |   metrics.md
+|   |       |   phase-gate-policy.md
 |   |       |   regression.md
 |   +---Level Contracts
 |   |   |   Level 0–1 Contract.md
@@ -29,5 +30,8 @@ C:.
 |   |   |   Level 3–4 Contract.md
 |   |   |   Level 5–6 Contract.md
 |   \---plan
+|       |   runtime-stack-lock-jax-flax-nnx.md
+|       |   single-h100-3b-open-decisions.md
+|       |   single-h100-3b-training-profile.md
 \---wheels
     \---linux_cp312
