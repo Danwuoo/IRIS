@@ -1,7 +1,7 @@
 # Single-H100 3B Training Profile
 
 **Document Type:** Design Note (Non-normative)  
-**Status:** Active planning baseline  
+**Status:** Active planning baseline (OD values applied)  
 **Phase Intent:** Phase C-compatible training profile  
 **Non-Override Clause:** This note does not override system invariants, State IR contracts, Level contracts, trunk contract, or learnable-control requirements.
 
@@ -43,12 +43,13 @@ This is not a large-scale production LLM deployment profile.
 | Master weights | `FP32` |
 | LN / logits | `FP32` |
 | Accumulators | `FP32` |
-| Activation strategy | Block-level `jax.remat` from start |
-| Shape policy | Fixed buckets only: `512 / 1024 / 2048` |
-| Main context length | `2048` |
+| Activation strategy | Block-level `jax.remat` from start (see `OD-08`) |
+| Shape policy | Formal training uses single bucket `1024`; `512/1024` allowed for compile warmup only (see `OD-07`) |
+| Main context length | `1024` |
 | Microbatch | `2` |
 | Gradient accumulation | Enabled |
 | Cross-segment accumulation | Forbidden |
+| Runtime lock policy | Lock manifest v1 required; Phase `C+` upgrades frozen unless baseline rebuild (see `OD-02`) |
 
 ---
 
@@ -73,11 +74,11 @@ This is not a large-scale production LLM deployment profile.
 
 | Item | Value |
 | --- | --- |
-| `seq_len` | `2048` |
+| `seq_len` | `1024` |
 | `microbatch` | `2` |
-| tokens per forward | `4096` |
+| tokens per forward | `2048` |
 | target tokens per optimizer step | `~1,000,000` |
-| accumulation steps | `~244` (`4096 * 244 = 999,424`) |
+| accumulation steps | `~488` (`2048 * 488 = 999,424`) |
 
 Notes:
 
@@ -92,9 +93,13 @@ Notes:
 | --- | --- |
 | Small checkpoint | Every `100` optimizer steps |
 | Full checkpoint | Every `1000` optimizer steps |
+| Segment sizing | Target `40` minutes; hard max `45` minutes; must align to optimizer-step boundary |
 | Segment journal | Append-only |
 | Resume consistency | Must pass `S8 Resume Consistency Regression` |
 | Segment semantics | Two-phase `PENDING -> APPLIED` |
+| Checkpoint retention | Three-tier: recent `5` segments + daily `1` + per-phase milestone `1` permanent |
+| Runtime lock manifest | Must record `runtime_lock_manifest_id` and `runtime_lock_manifest_sha256` in checkpoint metadata |
+| Segment-end evaluation | One eval snapshot at each segment end (lite metrics allowed) |
 
 Detailed execution and restart semantics are defined in:
 
@@ -111,7 +116,7 @@ Detailed execution and restart semantics are defined in:
 | Attention heads | `20` |
 | Head dim | `128` |
 | FFN multiplier | `4` |
-| Vocab | `50k-100k` (final pick tracked in open decisions) |
+| Vocab | `100k` fixed, with protected IR/control sub-vocab (no merge/split on protected strings) |
 
 This section is a training profile recommendation, not a contract-level architecture rewrite.
 
@@ -131,8 +136,8 @@ This section is a training profile recommendation, not a contract-level architec
 
 The following hard controls are temporary guardrails and must not become semantic policy:
 
-1. Fixed shape buckets (`512/1024/2048`)
-2. Fixed main context length (`2048`)
+1. Fixed single training bucket (`1024`)
+2. Compile-warmup bucket restriction (`512/1024` only)
 3. Hard clip (`global norm = 1.0`)
 
 Removal criteria:
@@ -155,9 +160,13 @@ Intended learned replacement:
 For architecture/training-impacting updates under this profile:
 
 - Keep phase declaration explicit in artifacts (`phase = C|D|E` as applicable)
-- Maintain baseline/tolerance profile integrity
+- Maintain baseline/tolerance profile integrity (`tolerance_profile_id` frozen at Phase `B -> C`, tightening-only afterward)
 - Run activated suites per `phase-gate-policy.md`
 - Block on any hard-gate violation
+- Eval cadence is fixed:
+  - Per segment: lite probes `S1/S2` + `S3` when active
+  - Every `24h` or `200` optimizer steps (whichever first): full activated suites
+  - Before phase gate: mandatory full regression
 
 ---
 

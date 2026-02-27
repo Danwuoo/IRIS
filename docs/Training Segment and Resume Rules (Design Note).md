@@ -66,6 +66,16 @@ If interruption occurs before apply, the segment remains `PENDING` and must be r
 - Maintain an append-only journal for `PENDING -> APPLIED`.
 - Small checkpoint cadence: every `100` optimizer steps.
 - Full checkpoint cadence: every `1000` optimizer steps.
+- Segment wall-clock target: `40` minutes.
+- Segment wall-clock hard max: `45` minutes.
+- Segment boundary must align to optimizer-step boundary.
+- Segment-end eval snapshot: required (lite metrics allowed).
+
+### Retention tiers (single-H100 profile)
+
+- Keep last `5` segment checkpoints.
+- Keep `1` checkpoint per day.
+- Keep `1` checkpoint per phase milestone permanently.
 
 ### Minimum checkpoint content
 
@@ -83,6 +93,8 @@ If interruption occurs before apply, the segment remains `PENDING` and must be r
 - `config_hash`
 - `phase`
 - `tolerance_profile_id`
+- `runtime_lock_manifest_id`
+- `runtime_lock_manifest_sha256`
 
 ---
 

@@ -198,6 +198,7 @@ profile in `docs/harness/legacy/phase-gate-policy.md`.
 
 * All Levels instantiated
 * No token schema drift
+* Tokenizer protected IR/control strings remain atomic (`rep.tokenizer.ir_fragmentation_rate == 0` once configured)
 * No new hard-coded control paths
 * Routing outputs remain learnable (non-degenerate)
 
@@ -288,6 +289,7 @@ Either condition → **block**
   * `failure.credit.collapse_rate`
   * `eval.calibration_error`
   * `prog.diversity`
+  * `rep.tokenizer.ir_fragmentation_rate` (text/IR-control pipelines only)
   * `search.termination_margin` (failure-masking checks)
 
 **Gate**:
@@ -295,6 +297,7 @@ Either condition → **block**
 * Credit collapse rate increase beyond tolerance → **block**
 * Calibration degradation beyond tolerance → **block**
 * Program diversity collapse → **block**
+* Any increase in `rep.tokenizer.ir_fragmentation_rate` beyond tolerance → **block**
 * Cost gain caused by failure masking → **block**
 
 ---

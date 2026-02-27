@@ -149,11 +149,14 @@ Hard attribution (single Level) is **not allowed**.
 | `rep.object.entropy`  | float | Slot / assignment uncertainty |
 | `dyn.violation_score` | float | Constraint / energy violation |
 | `dyn.uncertainty`     | float | Predictive uncertainty        |
+| `rep.tokenizer.unk_rate` | float | Fraction of `UNK` tokens in text inputs (0 if none) |
+| `rep.tokenizer.ir_fragmentation_rate` | float | Protected IR/control strings split into >1 token |
 
 **Interpretation**
 
 * High entropy + downstream failure → `F_REP`
 * Low entropy but wrong → likely upstream masking (invalid)
+* Non-zero `rep.tokenizer.ir_fragmentation_rate` → control/markup instability (`F_REP` or downstream `F_PROC`)
 
 ---
 
@@ -250,6 +253,7 @@ Hard attribution (single Level) is **not allowed**.
 | `paired.invariance.gap`               | float | Paired invariance must not worsen       |
 | `search.termination_margin`           | float | Avoid failure-masking early stop        |
 | `process.failure_distribution_entropy`| float | Keep failure diagnostics informative    |
+| `rep.tokenizer.ir_fragmentation_rate` | float | Protected IR/control tokens must remain atomic |
 
 ### 5.2 Priority Rule
 
@@ -322,6 +326,13 @@ No silent passes are allowed.
   * Phase
   * Dataset / tool source
   * Full failure credit vector
+
+* Run metadata MUST include (minimum):
+
+  * `baseline_id`
+  * `tolerance_profile_id`
+  * `runtime_lock_manifest_id` (or sha256)
+  * `tokenizer.vocab_size` (when text pipeline is active)
 * Aggregation MUST NOT discard tail failures
 
 ---
