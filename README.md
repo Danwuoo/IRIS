@@ -10,3 +10,7 @@ Integrated Reasoning via Internal State
 ## Agent Workflow
 
 - Contributor/agent rules: `AGENTS.md`
+
+## Contributor
+
+- This repo is contributed with GPT-5.3-Codex and GPT-5.2
