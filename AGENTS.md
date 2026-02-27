@@ -9,7 +9,12 @@ If there is any conflict between documents:
 - **System-level invariants and normative contracts override everything else.**
 - "Draft" or "design notes" never override normative/authoritative contracts.
 
-When uncertain, explicitly label **不確定** and default to *not* making the change until the relevant contract text is consulted.
+When uncertain, explicitly label **不確定**.
+
+If uncertainty can be resolved by consulting binding documents listed in Section 1 or 2,
+you MUST resolve it before defaulting to not making the change.
+
+Only unresolved uncertainty after mandatory consultation should block implementation.
 
 ---
 
@@ -89,6 +94,12 @@ You must refuse to implement changes that:
 5. Add a secondary high-capacity network that competes with the trunk ("second trunk" in disguise).
 6. Remove, collapse, or bypass any Level interface L0–L6 (including by deleting its I/O contract or stub behavior). Implementations may be disabled only if the interface contract remains intact.
 
+When refusing any change under this section, you MUST:
+- Propose the closest contract-compliant alternative, OR
+- Produce a minimal Change Proposal stub that identifies the blocking clause and a compliant migration path.
+
+Pure refusal without a next-step artifact is not allowed.
+
 ---
 
 ## 5) Required Workflow for Any Change
@@ -113,6 +124,13 @@ Phase definitions, suite activation states, and promotion requirements are gover
 Any architectural/training/eval-impacting change must:
 - Preserve the regression harness expectations and artifacts.
 - Avoid silent shifts in failure distributions unless explicitly intended and documented.
+
+All declared changes or plans MUST terminate explicitly in one of:
+- Done
+- Blocked (with blocking contract cited)
+- Cancelled (with reason)
+
+No open-ended or implicitly ongoing work is allowed.
 
 ---
 
