@@ -1,4 +1,17 @@
-# Credit Assignment & Failure Recovery Model
+# Credit Assignment and Failure Recovery
+
+**Document Type:** Canonical Specification (Normative)  
+**Effective date:** 2026-02-27  
+**Replaces (removed on 2026-02-27):**
+- Credit Assignment & Failure Recovery Model
+
+(See `docs/00_INDEX.md` for the historical path mapping.)
+
+**Authority:** Defines canonical failure taxonomy, credit routing semantics, and recovery responsibility boundaries.
+
+---
+
+## Credit Assignment & Failure Recovery Model
 
 *(Canonical Specification)*
 
@@ -11,7 +24,7 @@ This document is normative and non-optional.
 
 ---
 
-## 1. Purpose and Scope
+### 1. Purpose and Scope
 
 The purpose of this document is to ensure that:
 
@@ -30,9 +43,9 @@ It does **not** specify optimization algorithms, loss functions, or implementati
 
 ---
 
-## 2. Core Principles (Non-Negotiable)
+### 2. Core Principles (Non-Negotiable)
 
-### 2.1 Semantic Credit, Not Gradient Convenience
+#### 2.1 Semantic Credit, Not Gradient Convenience
 
 Credit assignment is defined in terms of **semantic failure modes**, not gradient flow convenience.
 
@@ -41,7 +54,7 @@ Credit assignment is defined in terms of **semantic failure modes**, not gradien
 
 ---
 
-### 2.2 No End-to-End Collapse
+#### 2.2 No End-to-End Collapse
 
 The system **must not** rely on a single end-to-end loss that freely adjusts all Levels simultaneously.
 
@@ -50,7 +63,7 @@ The system **must not** rely on a single end-to-end loss that freely adjusts all
 
 ---
 
-### 2.3 Failure Recovery Is a First-Class Output
+#### 2.3 Failure Recovery Is a First-Class Output
 
 Failure recovery decisions are **model outputs**, not engineering fallbacks.
 
@@ -59,11 +72,11 @@ Failure recovery decisions are **model outputs**, not engineering fallbacks.
 
 ---
 
-## 3. Failure Taxonomy (Canonical)
+### 3. Failure Taxonomy (Canonical)
 
 All failures must be mapped into one or more of the following categories.
 
-### 3.1 Representation Failure (L0 / L1)
+#### 3.1 Representation Failure (L0 / L1)
 
 **Symptoms**
 
@@ -82,7 +95,7 @@ All failures must be mapped into one or more of the following categories.
 
 ---
 
-### 3.2 Procedural Failure (L2)
+#### 3.2 Procedural Failure (L2)
 
 **Symptoms**
 
@@ -100,7 +113,7 @@ All failures must be mapped into one or more of the following categories.
 
 ---
 
-### 3.3 Search / Resource Allocation Failure (L3)
+#### 3.3 Search / Resource Allocation Failure (L3)
 
 **Symptoms**
 
@@ -118,7 +131,7 @@ All failures must be mapped into one or more of the following categories.
 
 ---
 
-### 3.4 Knowledge / Memory Failure (L4)
+#### 3.4 Knowledge / Memory Failure (L4)
 
 **Symptoms**
 
@@ -136,7 +149,7 @@ All failures must be mapped into one or more of the following categories.
 
 ---
 
-### 3.5 Abstraction Failure (L5)
+#### 3.5 Abstraction Failure (L5)
 
 **Symptoms**
 
@@ -153,7 +166,7 @@ All failures must be mapped into one or more of the following categories.
 
 ---
 
-### 3.6 Evaluation / Diagnosis Failure (L6)
+#### 3.6 Evaluation / Diagnosis Failure (L6)
 
 **Symptoms**
 
@@ -171,11 +184,11 @@ All failures must be mapped into one or more of the following categories.
 
 ---
 
-## 4. Credit Assignment Flow (Canonical Direction)
+### 4. Credit Assignment Flow (Canonical Direction)
 
 Credit assignment flows **top-down**, not bottom-up.
 
-### 4.1 Directionality Rule
+#### 4.1 Directionality Rule
 
 1. **Level 6 diagnoses outcome validity**
 2. **Level 3 decides whether more effort is warranted**
@@ -186,7 +199,7 @@ Lower Levels **do not self-diagnose global failure**.
 
 ---
 
-### 4.2 L6 Credit Router (Mandatory)
+#### 4.2 L6 Credit Router (Mandatory)
 
 Level 6 must output a **credit routing distribution**, not a hard decision:
 
@@ -209,9 +222,9 @@ Level 6 must not emit direct computation-budget parameters; recovery scheduling 
 
 ---
 
-## 5. Failure Recovery Semantics (Inference-Time)
+### 5. Failure Recovery Semantics (Inference-Time)
 
-### 5.1 Recovery Is Targeted, Not Global
+#### 5.1 Recovery Is Targeted, Not Global
 
 When failure is detected:
 
@@ -220,7 +233,7 @@ When failure is detected:
 
 ---
 
-### 5.2 Canonical Recovery Actions by Level
+#### 5.2 Canonical Recovery Actions by Level
 
 | Credited Level | Permitted Recovery Actions                                          |
 | -------------- | ------------------------------------------------------------------- |
@@ -238,7 +251,7 @@ Recovery actions must be **parameterized by learned heads**, even if bounded by 
 
 ---
 
-### 5.3 Multi-Level Failures
+#### 5.3 Multi-Level Failures
 
 If credit is distributed across multiple Levels:
 
@@ -249,9 +262,9 @@ The ordering itself should be learnable via Level 3 policies.
 
 ---
 
-## 6. Training-Time Credit Assignment
+### 6. Training-Time Credit Assignment
 
-### 6.1 Loss Routing Constraint
+#### 6.1 Loss Routing Constraint
 
 Training losses must be **Level-addressable**.
 
@@ -260,7 +273,7 @@ Training losses must be **Level-addressable**.
 
 ---
 
-### 6.2 Forbidden Training Patterns
+#### 6.2 Forbidden Training Patterns
 
 The following are explicitly forbidden:
 
@@ -270,7 +283,7 @@ The following are explicitly forbidden:
 
 ---
 
-### 6.3 Acceptable Patterns
+#### 6.3 Acceptable Patterns
 
 Allowed patterns include:
 
@@ -280,9 +293,9 @@ Allowed patterns include:
 
 ---
 
-## 7. Responsibility Boundaries (Hard Rules)
+### 7. Responsibility Boundaries (Hard Rules)
 
-### 7.1 Lower Levels Cannot “Fix” Higher-Level Mistakes
+#### 7.1 Lower Levels Cannot “Fix” Higher-Level Mistakes
 
 Examples:
 
@@ -291,7 +304,7 @@ Examples:
 
 ---
 
-### 7.2 Higher Levels Cannot Mask Lower-Level Errors
+#### 7.2 Higher Levels Cannot Mask Lower-Level Errors
 
 Examples:
 
@@ -300,7 +313,7 @@ Examples:
 
 ---
 
-## 8. Observable Signals Required (Minimum)
+### 8. Observable Signals Required (Minimum)
 
 Each Level must expose **diagnostic signals** consumable by L6:
 
@@ -312,7 +325,7 @@ Opaque Levels that provide no introspectable signals are non-compliant.
 
 ---
 
-## 9. Non-Goals (Explicit)
+### 9. Non-Goals (Explicit)
 
 This model explicitly does **not** aim to:
 
@@ -328,7 +341,7 @@ However, any heuristic must be:
 
 ---
 
-## 10. Summary (Normative)
+### 10. Summary (Normative)
 
 * Credit assignment is **semantic, hierarchical, and explicit**
 * Failure recovery is **targeted, learnable, and Level-aware**

@@ -1,37 +1,17 @@
-Folder PATH listing
-Volume serial number is 708A-979C
-C:.
-|   .gitignore
-|   AGENTS.md
-|   README.md
-|   
-+---docs
-|   |   Credit Assignment & Failure Recovery Model.md
-|   |   Data Mixture & Ingestion Specification.md
-|   |   Pretraining Objective Spec.md
-|   |   repo-tree.txt
-|   |   Routing, Gating, and Control Are Learnable.md
-|   |   Single Trunk Contract & Allowed Variations.md
-|   |   State IR Canonical Spec.md
-|   |   State IR Examples & Edge Cases.md
-|   |   System Invariants & Non-Negotiables.md
-|   |   Training Segment and Resume Rules (Design Note).md
-|   |   What This Model Is Explicitly NOT.md
-|   |   模型架構設計.md
-|   |   
-|   +---harness
-|   |   \---legacy
-|   |       |   metrics.md
-|   |       |   phase-gate-policy.md
-|   |       |   regression.md
-|   +---Level Contracts
-|   |   |   Level 0–1 Contract.md
-|   |   |   Level 2 Contract.md
-|   |   |   Level 3–4 Contract.md
-|   |   |   Level 5–6 Contract.md
-|   \---plan
-|       |   runtime-stack-lock-jax-flax-nnx.md
-|       |   single-h100-3b-open-decisions.md
-|       |   single-h100-3b-training-profile.md
-\---wheels
-    \---linux_cp312
+IRIS docs tree (snapshot)
+Generated: 2026-02-27
+Scope: docs/ only (excludes data/, src/, tools/, wheels/, etc.)
+
+docs/
+  00_INDEX.md
+  01_Architecture_Constitution.md
+  02_State_IR_Spec.md
+  03_Level_Contracts_L0-L6.md
+  04_Credit_Assignment_and_Recovery.md
+  05_Eval_Metrics_Spec.md
+  06_Regression_and_Phase_Gates.md
+  07_Data_Mixture_and_Ingestion.md
+  08_Training_Run_Governance.md
+  09_Training_Profile_SingleH100_3B.md
+  10_Glossary_and_Normative_Status.md
+  repo-tree.txt

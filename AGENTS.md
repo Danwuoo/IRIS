@@ -16,34 +16,28 @@ When uncertain, explicitly label **不確定** and default to *not* making the c
 ## 1) Mandatory Reading (Always Required)
 Before you implement or modify anything, read these documents in this order:
 
-1. `docs/System Invariants & Non-Negotiables.md` (Authoritative hard invariants) :contentReference[oaicite:3]{index=3}
-2. `docs/What This Model Is Explicitly NOT.md` (Explicit non-goals; disallowed shortcuts) :contentReference[oaicite:4]{index=4}
-3. `docs/Routing, Gating, and Control Are Learnable.md` (Control must be learnable; if/else is technical debt only) :contentReference[oaicite:5]{index=5}
-4. `docs/State IR Canonical Spec.md` (Canonical State IR; closed token types) :contentReference[oaicite:6]{index=6}
-5. `docs/State IR Examples & Edge Cases.md` (Normative examples and forbidden schema drift) :contentReference[oaicite:7]{index=7}
-6. `docs/Single Trunk Contract & Allowed Variations.md` (Trunk contract; allowed vs forbidden changes) :contentReference[oaicite:8]{index=8}
-7. `docs/Credit Assignment & Failure Recovery Model.md` (Credit/blame routing; recovery semantics) :contentReference[oaicite:9]{index=9}
-8. Level contracts:
-   - `docs/Level Contracts/Level 0–1 Contract.md` :contentReference[oaicite:10]{index=10}
-   - `docs/Level Contracts/Level 2 Contract.md` :contentReference[oaicite:11]{index=11}
-   - `docs/Level Contracts/Level 3–4 Contract.md` :contentReference[oaicite:12]{index=12}
-   - `docs/Level Contracts/Level 5–6 Contract.md` :contentReference[oaicite:13]{index=13}
+Recommended entrypoint: `docs/00_INDEX.md` (non-normative), then read the binding contracts below.
+
+1. `docs/10_Glossary_and_Normative_Status.md` (Authority map + vocabulary)
+2. `docs/01_Architecture_Constitution.md` (Authoritative architecture invariants + non-goals + trunk + learnable control)
+3. `docs/02_State_IR_Spec.md` (Canonical State IR spec + examples; closed token types and ordering)
+4. `docs/03_Level_Contracts_L0-L6.md` (Level interface contracts; stub/observability/prohibitions)
+5. `docs/04_Credit_Assignment_and_Recovery.md` (Failure taxonomy + credit routing + recovery semantics)
 
 These are binding. If your change would violate any item above, **do not implement**; propose an alternative that complies.
 
 ---
 
-## 2) Legacy Planning and Phase Policy References (Required When Task Touches Planning/Eval Policy)
-If your task mentions or implies work on planning, evaluation policy, metrics, or regression process, you MUST read:
+## 2) Planning/Eval Policy References (Required When Task Touches Planning/Eval Policy)
+If your task mentions or implies work on planning, evaluation policy, metrics, regression process, or phase gates, you MUST read:
 
-- `docs/harness/legacy/phase-gate-policy.md` (legacy phase definitions, gate activation, promotion rules)
-- `docs/harness/legacy/metrics.md` (legacy metrics vocabulary and gates)
-- `docs/harness/legacy/regression.md` (legacy regression harness policy)
+- `docs/05_Eval_Metrics_Spec.md` (canonical metrics vocabulary and field semantics)
+- `docs/06_Regression_and_Phase_Gates.md` (canonical suites, phase activation, gates, artifacts, promotion criteria)
+- `docs/08_Training_Run_Governance.md` (required if the task touches resume/repro/runtime lock/S8)
 
 Notes:
-- `docs/harness/legacy/DevelopmentPlan.md` is retired and replaced by `docs/harness/legacy/phase-gate-policy.md`.
-- `docs/plan/phase_A.md` to `docs/plan/phase_E.md` are no longer active mainline documents.
-- Legacy documents are reference material and do not override Section 1 normative contracts.
+- Legacy `docs/harness/legacy/*` and `docs/plan/*` were removed during docs consolidation; do not reintroduce them.
+- Policy docs do not override Section 1 normative contracts.
 
 ---
 
@@ -52,14 +46,10 @@ This section defines what you may modify. Treat this as a repository policy.
 
 ### 3.1 Read-Only (RO): Binding Contracts and Invariants
 You MUST NOT edit these files as part of routine development:
-- `docs/System Invariants & Non-Negotiables.md` :contentReference[oaicite:22]{index=22}
-- `docs/What This Model Is Explicitly NOT.md` :contentReference[oaicite:23]{index=23}
-- `docs/Routing, Gating, and Control Are Learnable.md` :contentReference[oaicite:24]{index=24}
-- `docs/State IR Canonical Spec.md` :contentReference[oaicite:25]{index=25}
-- `docs/State IR Examples & Edge Cases.md` :contentReference[oaicite:26]{index=26}
-- `docs/Single Trunk Contract & Allowed Variations.md` :contentReference[oaicite:27]{index=27}
-- All Level Contracts under `docs/Level Contracts/` :contentReference[oaicite:28]{index=28} :contentReference[oaicite:29]{index=29} :contentReference[oaicite:30]{index=30} :contentReference[oaicite:31]{index=31}
-- `docs/Credit Assignment & Failure Recovery Model.md` :contentReference[oaicite:32]{index=32}
+- `docs/01_Architecture_Constitution.md`
+- `docs/02_State_IR_Spec.md`
+- `docs/03_Level_Contracts_L0-L6.md`
+- `docs/04_Credit_Assignment_and_Recovery.md`
 
 If you believe a RO document is wrong or incomplete, you may:
 - Write a proposal in a *new* document (see 3.3) explaining the conflict, implications, and migration plan.
@@ -67,15 +57,14 @@ If you believe a RO document is wrong or incomplete, you may:
 
 ### 3.2 Tooling Vendored Code (RO by Default)
 The following are treated as externally sourced or "vendored":
-- `tools/arc-agi-benchmarking/` (Do not modify tool internals as part of IRIS core work) :contentReference[oaicite:33]{index=33}
-- `tools/ConceptARC/` (Do not rewrite the dataset/tool logic for convenience) :contentReference[oaicite:34]{index=34}
+- `tools/arc-agi-benchmarking/` (Do not modify tool internals as part of IRIS core work)
+- `tools/ConceptARC/` (Do not rewrite the dataset/tool logic for convenience)
 
 Allowed: add adapters/wrappers in `src/` that consume these tools without altering their upstream semantics.
 
 ### 3.3 Writable (W): Plans, Metrics, Regression, New Notes
 You MAY edit/add under:
-- `docs/plan/` (active planning docs, if present), provided you do not contradict RO contracts
-- `docs/harness/legacy/` (archived planning/metrics/regression references)
+- `docs/00_INDEX.md`, `docs/05_*.md` … `docs/10_*.md`, and `docs/repo-tree.txt`, provided you do not contradict RO contracts
 - New documents under `docs/` that are explicitly labeled as:
   - `Design Note (Non-normative)` OR
   - `Change Proposal (Requires Approval)`
@@ -83,22 +72,22 @@ You MAY edit/add under:
 
 ### 3.4 Writable (W): Core Implementation
 You MAY implement and refactor core system code under:
-- `src/` (the only place where core model behavior should live in Phase C and beyond) :contentReference[oaicite:37]{index=37} :contentReference[oaicite:38]{index=38}
+- `src/` (the only place where core model behavior should live in Phase C and beyond)
 
 You MUST keep:
-- State IR schema enforcement in `src/schema/` aligned with State IR Canonical Spec. :contentReference[oaicite:39]{index=39}
-- Trunk implementation consistent with trunk contracts (no hidden second trunk, and no architecture-specific bypass that violates the contract). :contentReference[oaicite:40]{index=40} :contentReference[oaicite:41]{index=41}
+- State IR schema enforcement in `src/schema/` aligned with `docs/02_State_IR_Spec.md`.
+- Trunk implementation consistent with `docs/01_Architecture_Constitution.md` (no hidden second trunk, and no architecture-specific bypass that violates the contract).
 
 ---
 
 ## 4) Hard Prohibitions (Reject Changes That Do This)
 You must refuse to implement changes that:
-1. Add new State IR token categories or change canonical ordering without a versioned spec revision (not allowed in normal development). :contentReference[oaicite:42]{index=42} :contentReference[oaicite:43]{index=43}
-2. Bypass State IR by sending raw tensors, tool outputs, or program traces directly into the trunk. :contentReference[oaicite:44]{index=44} :contentReference[oaicite:45]{index=45}
-3. Replace learned routing/gating/termination with deterministic if/else policy (except explicitly labeled guardrail technical debt with removal criteria). :contentReference[oaicite:46]{index=46} :contentReference[oaicite:47]{index=47}
-4. Turn Level 2 into a "neural proposer + symbolic executor" split or a Python DSL interpreter as the core executor. :contentReference[oaicite:48]{index=48} :contentReference[oaicite:49]{index=49}
-5. Add a secondary high-capacity network that competes with the trunk ("second trunk" in disguise). :contentReference[oaicite:50]{index=50} :contentReference[oaicite:51]{index=51}
-6. Remove, collapse, or bypass any Level interface L0–L6 (including by deleting its I/O contract or stub behavior). Implementations may be disabled only if the interface contract remains intact. :contentReference[oaicite:52]{index=52}
+1. Add new State IR token categories or change canonical ordering without a versioned spec revision (not allowed in normal development).
+2. Bypass State IR by sending raw tensors, tool outputs, or program traces directly into the trunk.
+3. Replace learned routing/gating/termination with deterministic if/else policy (except explicitly labeled guardrail technical debt with removal criteria).
+4. Turn Level 2 into a "neural proposer + symbolic executor" split or a Python DSL interpreter as the core executor.
+5. Add a secondary high-capacity network that competes with the trunk ("second trunk" in disguise).
+6. Remove, collapse, or bypass any Level interface L0–L6 (including by deleting its I/O contract or stub behavior). Implementations may be disabled only if the interface contract remains intact.
 
 ---
 
@@ -109,21 +98,21 @@ At the start of your work, explicitly declare one:
 - Targeted fix (must name failure category / suspected Level)
 - Capability expansion (must name concepts / expected impact)
 
-Use the failure taxonomy / metrics vocabulary; do not invent new labels ad hoc. :contentReference[oaicite:53]{index=53} :contentReference[oaicite:54]{index=54}
+Use the failure taxonomy / metrics vocabulary; do not invent new labels ad hoc.
 
 ### 5.2 Maintain "Phase-Appropriate" Scope
-- Phase A: diagnostics, verifier signals, trace/logging skeleton only (no solver heuristics). :contentReference[oaicite:55]{index=55}
-- Phase B: tool generation alignment (failure tags, paired tasks), do not encode correctness rules into tools. :contentReference[oaicite:56]{index=56}
-- Phase C: minimal closed loop in `src/` with all Level interfaces present (mounted or stubbed); failures must be attributable. :contentReference[oaicite:57]{index=57}
-- Phase D: ConceptARC as diagnostic harness; output isolation/leakage/attribution metrics (not leaderboard tuning). :contentReference[oaicite:58]{index=58}
-- Phase E: arc-agi-benchmarking as regression & verifier harness; no benchmark hacks. :contentReference[oaicite:59]{index=59}
+- Phase A: diagnostics, verifier signals, trace/logging skeleton only (no solver heuristics).
+- Phase B: tool generation alignment (failure tags, paired tasks), do not encode correctness rules into tools.
+- Phase C: minimal closed loop in `src/` with all Level interfaces present (mounted or stubbed); failures must be attributable.
+- Phase D: ConceptARC as diagnostic harness; output isolation/leakage/attribution metrics (not leaderboard tuning).
+- Phase E: arc-agi-benchmarking as regression & verifier harness; no benchmark hacks.
 
-Phase definitions, suite activation states, and promotion requirements are governed by `docs/harness/legacy/phase-gate-policy.md`.
+Phase definitions, suite activation states, and promotion requirements are governed by `docs/06_Regression_and_Phase_Gates.md`.
 
 ### 5.3 Regression Discipline (Always-On)
 Any architectural/training/eval-impacting change must:
 - Preserve the regression harness expectations and artifacts.
-- Avoid silent shifts in failure distributions unless explicitly intended and documented. :contentReference[oaicite:60]{index=60} :contentReference[oaicite:61]{index=61}
+- Avoid silent shifts in failure distributions unless explicitly intended and documented.
 
 ---
 
@@ -132,14 +121,14 @@ If you must introduce a hard cap (e.g., max steps), you MUST:
 - Label it clearly as TEMPORARY TECHNICAL DEBT.
 - Isolate it so it can be removed.
 - Provide a removal criterion and the intended learned replacement.
-- Ensure it does not become routine policy. :contentReference[oaicite:62]{index=62} :contentReference[oaicite:63]{index=63}
+- Ensure it does not become routine policy.
 
 ---
 
 ## 7) Repository Structure Expectations (Do Not Violate)
 - Core model behavior belongs in `src/`.
 - Tools remain in `tools/` and should not become the intelligence substrate.
-- Datasets are under `data/` and are not a place to encode semantics. :contentReference[oaicite:64]{index=64} :contentReference[oaicite:65]{index=65}
+- Datasets are under `data/` and are not a place to encode semantics.
 
 ---
 
@@ -149,6 +138,6 @@ You must include:
 - The change class (refactor / targeted fix / expansion).
 - The expected failure-category impact (using canonical metrics).
 - Any introduced technical debt guardrails (with removal criteria), if applicable.
-- Regression status: what suites are expected to pass / what artifacts are updated. :contentReference[oaicite:66]{index=66} :contentReference[oaicite:67]{index=67}
+- Regression status: what suites are expected to pass / what artifacts are updated.
 
 End of AGENTS.md
