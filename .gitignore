@@ -4,3 +4,6 @@
 /package
 *.whl
 /wheels
+/.pytest_cache
+/.venv-wsl-jax
+/.venv-wsl-jax2

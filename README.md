@@ -10,6 +10,7 @@ Integrated Reasoning via Internal State
 ## Agent Workflow
 
 - Contributor/agent rules: `AGENTS.md`
+- Codex long-horizon prompt bundle: `docs/codex_plan/Prompt.md`
 
 ## Contributor
 
