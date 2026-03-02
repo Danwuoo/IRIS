@@ -32,6 +32,12 @@ def main() -> int:
     )
     parser.add_argument("--crash-segment", type=int, default=-1)
     parser.add_argument("--resume-path-id", type=str, default="uninterrupted")
+    parser.add_argument(
+        "--runtime-lock-manifest",
+        type=Path,
+        default=None,
+        help="Path to a pinned runtime_lock_manifest.json to reuse across runs (strict S8 flow).",
+    )
     args = parser.parse_args()
     assert_jax_runtime(
         device=args.device,
@@ -54,6 +60,7 @@ def main() -> int:
         crash_point=args.crash_point,
         crash_segment=args.crash_segment,
         resume_path_id=args.resume_path_id,
+        runtime_lock_manifest_path=args.runtime_lock_manifest,
     )
 
     try:

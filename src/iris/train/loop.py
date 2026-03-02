@@ -8,6 +8,7 @@ import platform
 import subprocess
 import sys
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -63,6 +64,7 @@ def _build_runtime_lock_manifest(phase: str) -> Dict[str, Any]:
     ]
     return {
         "schema": "iris.runtime_lock_manifest/v1",
+        "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "phase": phase,
         "host": {
             "os": platform.platform(),
@@ -93,8 +95,44 @@ def _build_runtime_lock_manifest(phase: str) -> Dict[str, Any]:
     }
 
 
-def _write_runtime_lock_manifest(output_dir: Path, phase: str) -> Dict[str, str]:
-    manifest = _build_runtime_lock_manifest(phase=phase)
+def _load_pinned_runtime_lock_manifest(path: Path, phase: str) -> Dict[str, Any]:
+    if not path.exists():
+        raise RuntimeError(f"Pinned runtime lock manifest not found: {path}")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError as error:
+        raise RuntimeError(f"Pinned runtime lock manifest is not valid JSON: {path}") from error
+    if not isinstance(payload, dict):
+        raise RuntimeError(f"Pinned runtime lock manifest must be a JSON object: {path}")
+    if payload.get("schema") != "iris.runtime_lock_manifest/v1":
+        raise RuntimeError(
+            "Pinned runtime lock manifest schema mismatch. "
+            "Expected iris.runtime_lock_manifest/v1."
+        )
+    required_fields = ("schema", "created_at", "phase", "host", "python", "jax")
+    missing_fields = [field for field in required_fields if field not in payload]
+    if missing_fields:
+        raise RuntimeError(
+            "Pinned runtime lock manifest missing required fields: "
+            + ", ".join(missing_fields)
+        )
+    manifest_phase = str(payload.get("phase", "")).strip()
+    if manifest_phase and manifest_phase != str(phase):
+        raise RuntimeError(
+            f"Pinned runtime lock manifest phase mismatch. Expected '{phase}', got '{manifest_phase}'."
+        )
+    return payload
+
+
+def _write_runtime_lock_manifest(
+    output_dir: Path,
+    phase: str,
+    runtime_lock_manifest_path: Optional[Path] = None,
+) -> Dict[str, str]:
+    if runtime_lock_manifest_path is None:
+        manifest = _build_runtime_lock_manifest(phase=phase)
+    else:
+        manifest = _load_pinned_runtime_lock_manifest(Path(runtime_lock_manifest_path), phase=phase)
     manifest_path = output_dir / "runtime_lock_manifest.json"
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_text = json.dumps(manifest, sort_keys=True, indent=2)
@@ -202,10 +240,13 @@ class ToyTrainConfig:
     crash_point: str = "none"
     crash_segment: int = -1
     resume_path_id: str = "uninterrupted"
+    runtime_lock_manifest_path: Optional[Path] = None
 
     def as_dict(self) -> Dict[str, Any]:
         payload = dict(self.__dict__)
         payload["output_dir"] = str(self.output_dir)
+        if payload.get("runtime_lock_manifest_path") is not None:
+            payload["runtime_lock_manifest_path"] = str(payload["runtime_lock_manifest_path"])
         return payload
 
 
@@ -225,7 +266,11 @@ def run_toy_training(config: ToyTrainConfig) -> Dict[str, Any]:
     metrics_path = output_dir / "metrics.jsonl"
     config_hash = _stable_hash(config.as_dict())
     code_version_hash = _git_code_version_hash()
-    runtime_lock = _write_runtime_lock_manifest(output_dir=output_dir, phase=config.phase)
+    runtime_lock = _write_runtime_lock_manifest(
+        output_dir=output_dir,
+        phase=config.phase,
+        runtime_lock_manifest_path=config.runtime_lock_manifest_path,
+    )
 
     events = load_journal(journal_path)
     next_segment, last_applied, pending_event = resolve_resume_pointer(events)
@@ -425,6 +470,8 @@ def run_toy_training(config: ToyTrainConfig) -> Dict[str, Any]:
                     "resume_path_id": effective_resume_path,
                     "runtime_lock_manifest_id": runtime_lock["runtime_lock_manifest_id"],
                     "runtime_lock_manifest_sha256": runtime_lock["runtime_lock_manifest_sha256"],
+                    "code_version_hash": code_version_hash,
+                    "config_hash": config_hash,
                     "trunk.backend": "jax",
                 },
             )

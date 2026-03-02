@@ -7,3 +7,5 @@
 /.pytest_cache
 /.venv-wsl-jax
 /.venv-wsl-jax2
+*.pyc
+/packages
