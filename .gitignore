@@ -9,3 +9,4 @@
 /.venv-wsl-jax2
 *.pyc
 /packages
+*.zip
