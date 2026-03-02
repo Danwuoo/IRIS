@@ -10,6 +10,35 @@ import numpy as np
 from ..schema import StateIR
 
 _LEVEL_IDS = tuple(f"L{index}" for index in range(7))
+_FAILURE_CODES = ("F_REP", "F_PROC", "F_SEARCH", "F_MEM", "F_ABS", "F_EVAL")
+_FAILURE_CODE_LEVEL_MAP = {
+    "F_REP": ("L0", "L1"),
+    "F_PROC": ("L2",),
+    "F_SEARCH": ("L3",),
+    "F_MEM": ("L4",),
+    "F_ABS": ("L5",),
+    "F_EVAL": ("L6",),
+}
+
+
+def _normalize_failure_histogram(histogram: Mapping[str, float]) -> Dict[str, float]:
+    values = {code: float(histogram.get(code, 0.0)) for code in _FAILURE_CODES}
+    total = float(sum(values.values()))
+    if total <= 0.0:
+        return {code: 0.0 for code in _FAILURE_CODES}
+    return {code: values[code] / total for code in _FAILURE_CODES}
+
+
+def _failure_credit_to_code_distribution(failure_credit: Mapping[str, float]) -> Dict[str, float]:
+    distribution: Dict[str, float] = {}
+    for code, levels in _FAILURE_CODE_LEVEL_MAP.items():
+        distribution[code] = float(sum(float(failure_credit.get(level, 0.0)) for level in levels))
+    return _normalize_failure_histogram(distribution)
+
+
+def _dominant_failure_code(histogram: Mapping[str, float]) -> str:
+    normalized = _normalize_failure_histogram(histogram)
+    return max(_FAILURE_CODES, key=lambda code: float(normalized.get(code, 0.0)))
 
 
 def neutral_failure_credit() -> Dict[str, float]:
@@ -46,6 +75,8 @@ def build_canonical_metrics(
     extra = dict(extra or {})
     credit = validate_failure_credit(failure_credit or neutral_failure_credit())
     credit_values = np.asarray([credit[level_id] for level_id in _LEVEL_IDS], dtype=np.float64)
+    failure_code_distribution = _failure_credit_to_code_distribution(credit)
+    failure_code_dominant = _dominant_failure_code(failure_code_distribution)
     lengths = state.section_lengths()
     metrics = {
         "task.success": bool(task_validity_score >= 0.5),
@@ -57,6 +88,8 @@ def build_canonical_metrics(
         "cost.retrieval_calls": int(extra.get("cost.retrieval_calls", 0)),
         "failure.credit": credit,
         "failure.credit.collapse_rate": float(np.max(credit_values)),
+        "failure.code_distribution": failure_code_distribution,
+        "failure.code_dominant": failure_code_dominant,
         "rep.object.count": lengths["O"],
         "rep.relation.count": lengths["R"],
         "rep.event.count": lengths["X"],

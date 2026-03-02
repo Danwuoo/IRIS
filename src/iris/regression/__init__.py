@@ -17,6 +17,15 @@ from .phase_c_gate import (
     utc_now_iso,
     write_phase_c_gate_artifacts,
 )
+from .phase_d_gate import (
+    build_concept_breakdown_v2,
+    build_failure_profile_diff_v2,
+    build_paired_representation_diff_v2,
+    evaluate_s3_status_v2,
+    evaluate_s4_status_v2,
+    evaluate_s5_status_v2,
+    run_phase_d_gate,
+)
 
 __all__ = [
     "GateContext",
@@ -36,4 +45,11 @@ __all__ = [
     "evaluate_s8_status",
     "utc_now_iso",
     "write_phase_c_gate_artifacts",
+    "build_concept_breakdown_v2",
+    "build_failure_profile_diff_v2",
+    "build_paired_representation_diff_v2",
+    "evaluate_s3_status_v2",
+    "evaluate_s4_status_v2",
+    "evaluate_s5_status_v2",
+    "run_phase_d_gate",
 ]

@@ -78,6 +78,7 @@ Omitted: *.tar, /data, *.json, /package, *.whl, /wheels, /.pytest_cache, /.venv-
     08_Training_Run_Governance.md
     09_Training_Profile_SingleH100_3B.md
     10_Glossary_and_Normative_Status.md
+    11_Phase_D_Diagnostics_Design_Note.md
     codex_plan/
       Documentation.md
       Implement.md
@@ -95,6 +96,7 @@ Omitted: *.tar, /data, *.json, /package, *.whl, /wheels, /.pytest_cache, /.venv-
     _bootstrap.py
     eval_toy.py
     phase_c_gate.py
+    phase_d_gate.py
     s1_smoke.py
     s2_mounted.py
     s2_structural.py
@@ -102,6 +104,14 @@ Omitted: *.tar, /data, *.json, /package, *.whl, /wheels, /.pytest_cache, /.venv-
   src/
     iris/
       __init__.py
+      arc/
+        __init__.py
+        decoding.py
+        encoding.py
+        inference.py
+        loaders.py
+        pairing.py
+        types.py
       levels/
         __init__.py
         base.py
@@ -113,6 +123,7 @@ Omitted: *.tar, /data, *.json, /package, *.whl, /wheels, /.pytest_cache, /.venv-
       regression/
         __init__.py
         phase_c_gate.py
+        phase_d_gate.py
       runtime/
         __init__.py
         jax_runtime.py
@@ -131,10 +142,13 @@ Omitted: *.tar, /data, *.json, /package, *.whl, /wheels, /.pytest_cache, /.venv-
         __init__.py
         single_trunk.py
   tests/
+    test_arc_inference.py
+    test_arc_loaders.py
     conftest.py
     test_levels.py
     test_levels_mounted.py
     test_phase_c_gate_regression.py
+    test_phase_d_gate_regression.py
     test_state_ir.py
     test_train_jax_resume.py
     test_trunk_jax.py
