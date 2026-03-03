@@ -122,6 +122,51 @@ The following constraints are mandatory for the baseline defined in Section 3.2:
   - Extract `text` and `meta`.
   - Restrict by site/domain allowlist (for example `cs.stackexchange.com`, `math.stackexchange.com`, `stackoverflow.com`) and preserve source metadata.
 
+#### 3.4.1 Dataset References and Informative Notes (Non-normative)
+
+This subsection is **informative** and does not add constraints beyond Sections 3.3 and 3.4.
+It exists to provide dataset landing pages and operational context (motivation, common pitfalls, and provenance/licensing reminders).
+
+- `HuggingFaceFW/fineweb-edu`:
+  - Hugging Face: [HuggingFaceFW/fineweb-edu](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu)
+  - Rationale (informative): education-filtered general text that stabilizes base language capability while keeping broad coverage.
+  - Operational note (informative): for pilot-scale ingestion, FineWeb sample configs (`sample-10BT`, `sample-100BT`, `sample-350BT`) can be used before full runs.
+- `allenai/peS2o`:
+  - Hugging Face: [allenai/peS2o](https://huggingface.co/datasets/allenai/peS2o)
+  - Rationale (informative): long-form academic-style prose with sectioning and mixed symbol/text.
+  - Operational note (informative): `text` often contains paragraph breaks (`\n\n`); keep paragraph boundaries stable to reduce fragmentation artifacts.
+- `bigcode/the-stack`:
+  - Hugging Face: [bigcode/the-stack](https://huggingface.co/datasets/bigcode/the-stack)
+  - Rationale (informative): high-density source code that pushes non-natural-language token patterns and syntax regularities.
+  - Operational note (informative): The Stack is a multi-license corpus; keep provenance and licensing auditable per Section 3.3.
+- `bigcode/the-stack-v2-dedup` (not used as a direct content source in this baseline):
+  - Hugging Face: [bigcode/the-stack-v2-dedup](https://huggingface.co/datasets/bigcode/the-stack-v2-dedup)
+  - Operational note (informative): this dataset primarily provides file identifiers; bulk content retrieval is typically via the Software Heritage archive/object storage path and may require additional access steps/agreements.
+- `open-web-math/open-web-math`:
+  - Hugging Face: [open-web-math/open-web-math](https://huggingface.co/datasets/open-web-math/open-web-math)
+  - Rationale (informative): math-heavy text with LaTeX/MathJax-style markup that increases symbol density and derivation-like patterns.
+  - Operational note (informative): lean on `metadata.extraction_info.*` (math-signal fields) to avoid drifting toward narrative/forum content.
+- `EleutherAI/proof-pile-2` (`algebraic-stack`):
+  - Hugging Face: [EleutherAI/proof-pile-2](https://huggingface.co/datasets/EleutherAI/proof-pile-2)
+  - Rationale (informative): formal math, CAS-like text, and math-code mixtures that complement open-web-math with more rule/grammar regularity.
+  - Operational note (informative): within `algebraic-stack`, the higher signal-to-noise slices are often formal languages and math-code (for example Lean/Coq/Isabelle, Python/Julia, TeX).
+- `phanerozoic/Lean4-Mathlib`:
+  - Hugging Face: [phanerozoic/Lean4-Mathlib](https://huggingface.co/datasets/phanerozoic/Lean4-Mathlib)
+  - Rationale (informative): dependent-type and tactic-script text with strong syntactic constraints and proof-structured patterns.
+  - Operational note (informative): `docstring` is natural-language documentation; `fact` is typically the formal payload.
+- `togethercomputer/RedPajama-Data-1T` (`arxiv`):
+  - Hugging Face: [togethercomputer/RedPajama-Data-1T](https://huggingface.co/datasets/togethercomputer/RedPajama-Data-1T)
+  - Rationale (informative): type-theory and formal-derivation prose mixed with symbols; complements Lean/proof corpora with explanatory transitions.
+  - Operational note (informative): the arXiv slice is sourced from LaTeX; common preprocessing removes preamble/comments/macros/bibliographies, which tends to concentrate on derivation content rather than document scaffolding.
+- `crumb/openstax-text`:
+  - Hugging Face: [crumb/openstax-text](https://huggingface.co/datasets/crumb/openstax-text)
+  - Rationale (informative): textbook-style procedural exposition ("rule -> procedure -> outcome") useful for step-structured language.
+  - Operational note (informative): OpenStax content is CC BY; keep attribution metadata intact and auditable.
+- `togethercomputer/RedPajama-Data-1T` (`stackexchange`):
+  - Hugging Face: [togethercomputer/RedPajama-Data-1T](https://huggingface.co/datasets/togethercomputer/RedPajama-Data-1T)
+  - Rationale (informative): practical, explanation-first content that often includes algorithms and stepwise reasoning.
+  - Operational note (informative): this slice is typically HTML-stripped, organized into Q/A pairs, and sorted by a quality/score signal; site allowlisting helps avoid low-signal conversational spillover.
+
 ### 3.5 Document-Extracted Text Policy
 
 - Baseline allocation is 10% of total training tokens (11.11% of Pure LM) under Section 3.2.
