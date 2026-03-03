@@ -3,7 +3,8 @@
 **Document Type:** Stability-Critical Spec (Canonical Binding)  
 **Scope:** Training data mixture, ingestion constraints, QA gates, monitoring, and change control  
 **Gate policy:** Mixture/ingestion changes require regression gating per `docs/06_Regression_and_Phase_Gates.md`  
-**Source lineage:** Consolidated from a legacy data-mixture spec (removed on 2026-02-27).
+**Source lineage:** Consolidated from a legacy data-mixture spec (removed on 2026-02-27).  
+**Source consolidation note (2026-03-03):** Integrated the Pure LM dataset breakdown from `Pure LM (90% of total tokens).md` into Section 3 with no change to top-level mixture authority.
 
 ---
 
@@ -18,7 +19,7 @@ This document defines:
 - Data quality and ingestion constraints
 - Change control requirements
 
-This specification is considered a stability-critical training configuration.
+This specification is a stability-critical training configuration.
 Modifications require phase-gated review and regression validation.
 
 ---
@@ -29,32 +30,46 @@ Modifications require phase-gated review and regression validation.
 
 | Category | Ratio | Description |
 | --- | --- | --- |
-| Pure LM (Primary Corpus) | 90% | Standard language model pretraining data |
+| Pure LM (Primary Corpus) | 90% | Standard language-model pretraining corpus with controlled sub-mixture |
 | IR-aligned Synthetic | 10% | Mechanism-aligned capability reinforcement |
 | Benchmark Data | 0% | Regression probe only (not used for training) |
 
-Benchmark datasets (e.g., ARC-family) must not be included in training data and must not influence mixture composition.
+### 2.2 Non-Negotiable Boundary
+
+Benchmark datasets (for example ARC-family) must not be included in training data and must not influence mixture composition.
 
 ---
 
 ## 3. Pure LM (90%)
 
-### 3.1 Internal Composition
+### 3.1 Composition Overview
 
-| Subcategory | Ratio | Notes |
+Pure LM remains fixed at 90% of total training tokens and is partitioned as:
+
+| Pure LM Segment | Ratio of Total Training Tokens | Ratio Within Pure LM |
 | --- | --- | --- |
-| General Clean Text | 80% | Books, web text, code, curated corpora |
-| Document-Extracted Text | 10% | PDF / HTML / Word / PPT → clean text |
+| General and specialized text/code/math corpus | 80% | 88.89% |
+| Document-extracted long-form corpus | 10% | 11.11% |
 
-### 3.2 Document-Extracted Text Policy
+### 3.2 Internal Sub-Mixture Breakdown (Baseline)
 
-- Initial allocation: **10% of Pure LM**
-- Upper bound: **15%**, subject to stability review
-- Inclusion requires passing the Data QA Gate (Section 3.4)
+All percentages below are ratios of total training tokens and must sum to 90%.
 
-### 3.3 Ingestion Constraints
+| Dataset | Ratio of Total Training Tokens | Ratio Within Pure LM | Segment | Primary Role |
+| --- | --- | --- | --- | --- |
+| `HuggingFaceFW/fineweb-edu` | 60% | 66.67% | General/specialized | General language capability backbone |
+| `allenai/peS2o` | 10% | 11.11% | Document-extracted | Long-form, structured academic text |
+| `bigcode/the-stack` | 8% | 8.89% | General/specialized | Source code dominant corpus |
+| `open-web-math/open-web-math` | 4% | 4.44% | General/specialized | High math-symbol density text |
+| `EleutherAI/proof-pile-2` (`algebraic-stack`) | 2% | 2.22% | General/specialized | Formal/math-code and CAS style data |
+| `phanerozoic/Lean4-Mathlib` | 2% | 2.22% | General/specialized | Dependent-type and tactic-script text |
+| `togethercomputer/RedPajama-Data-1T` (`arxiv`) | 2% | 2.22% | General/specialized | Type-theory and formal-derivation prose |
+| `crumb/openstax-text` | 1% | 1.11% | General/specialized | Textbook procedural exposition |
+| `togethercomputer/RedPajama-Data-1T` (`stackexchange`) | 1% | 1.11% | General/specialized | Practical rule-to-procedure explanations |
 
-Allowed input formats:
+### 3.3 Corpus and Ingestion Constraints (Mandatory)
+
+Allowed document extraction source formats (for document-derived ingestion) are:
 
 - PDF
 - HTML
@@ -63,25 +78,74 @@ Allowed input formats:
 
 Ingestion rules:
 
-- Only `clean_text (UTF-8)` may enter the tokenizer.
-- Metadata (source, extractor version, hash, provenance) must remain external to token sequences.
-- No modification or expansion of the State IR token type set is permitted.
+- Only clean text in UTF-8 (`clean_text`) may enter the tokenizer.
+- Metadata (source, extractor version, hash, provenance, dataset/subset identifiers) must remain external to token sequences.
+- State IR schema must remain unchanged; no addition or expansion of State IR token types is permitted.
+- Dataset identifier, subset/config, extracted fields, and sampling policy must be pinned and logged for every run.
+- Licensing and attribution obligations for each dataset must be satisfied and auditable.
+- `bigcode/the-stack-v2-dedup` must not be used as a direct content source for this mixture baseline.
 
-State IR schema stability must be preserved.
+### 3.4 Dataset-Specific Extraction and Filter Constraints
 
-### 3.4 Data QA Gate (Mandatory)
+The following constraints are mandatory for the baseline defined in Section 3.2:
+
+- `HuggingFaceFW/fineweb-edu`:
+  - Extract `text` for training content.
+  - Preserve `id`, `url`, and `dump` for provenance.
+  - Optional resampling may use `token_count`, `score`, or `int_score`; if used, the policy must be pinned and logged.
+- `allenai/peS2o`:
+  - Extract `text`; preserve `id`, `source`, `created`, and `added`.
+  - Restrict to `source="s2orc"` for full-text paper coverage.
+- `bigcode/the-stack`:
+  - Extract `content`; use `lang`, `ext`, `avg_line_length`, and `alphanum_fraction` for filtering.
+  - Remove comments, docstrings, README-like files, and Markdown-heavy files from primary code content.
+  - Use an explicit language allowlist (for example C/C++/Rust/Python/OCaml/Haskell/Java) and avoid high HTML/Markdown/TeX contamination.
+- `open-web-math/open-web-math`:
+  - Extract `text` and use `metadata`/`metadata.extraction_info.*` to retain high math-density content.
+  - Exclude low-math conversational/forum-like narrative content.
+- `EleutherAI/proof-pile-2` (`algebraic-stack`):
+  - Extract `text`; preserve `meta`.
+  - Prioritize high symbol-density/formal subsets (for example Python/Isabelle/Lean/Coq/Julia/TeX slices).
+- `phanerozoic/Lean4-Mathlib`:
+  - Use `fact` as primary training text and do not use `docstring` as primary content.
+  - Restrict selected entries to formal definition/theorem-like `type` values.
+  - Drop excessively short `fact` entries to reduce fragmentation.
+- `togethercomputer/RedPajama-Data-1T` (`arxiv`):
+  - Enforce `red_pajama_subset="arxiv"`.
+  - Extract `text` and `meta`, and apply pattern filters aligned to formal logic/type-system material (for example `\\Gamma`, `\\vdash`, `\\lambda`, `\\Pi`, `\\Sigma`, and type-theory keywords).
+- `crumb/openstax-text`:
+  - Extract `text`.
+  - Apply paragraph-level procedural filters (`Algorithm:`, `Procedure:`, `Step 1`, `Input/Output`, structured step lists, pseudo-code markers).
+  - Preserve required CC BY attribution metadata.
+- `togethercomputer/RedPajama-Data-1T` (`stackexchange`):
+  - Enforce `red_pajama_subset="stackexchange"`.
+  - Extract `text` and `meta`.
+  - Restrict by site/domain allowlist (for example `cs.stackexchange.com`, `math.stackexchange.com`, `stackoverflow.com`) and preserve source metadata.
+
+### 3.5 Document-Extracted Text Policy
+
+- Baseline allocation is 10% of total training tokens (11.11% of Pure LM) under Section 3.2.
+- Upper bound is 15% of Pure LM tokens (13.5% of total training tokens), subject to stability review and regression gating.
+- Inclusion requires passing the Data QA Gate (Section 3.6).
+- Extractor version updates are treated as distributional shifts and require regression validation before promotion.
+
+### 3.6 Data QA Gate (Mandatory)
 
 Document-derived text must satisfy all of the following:
 
-1. Control / non-printable character ratio ≤ 2%
-2. Repetition rate ≤ 20% (template/header/footer contamination filter)
-3. No severe fragmentation (e.g., average line length < 20 characters with excessive line breaks)
+1. Control/non-printable character ratio <= 2%
+2. Repetition rate <= 20% (template/header/footer contamination filter)
+3. No severe fragmentation (for example average line length < 20 characters with excessive line breaks)
 4. Language distribution consistent with expected corpus distribution
-5. Extractor version must be pinned and logged
+5. Extractor version pinned and logged
 
 Documents failing any criterion must be excluded from the primary corpus.
+Dataset-specific filters in Section 3.4 are additional constraints and do not replace this gate.
 
-Extractor version changes are treated as distributional shifts and require regression validation.
+### 3.7 Scaling and Ramp Notes
+
+- For pilot-scale validation, FineWeb sample configs (`sample-10BT`, `sample-100BT`, `sample-350BT`) may be used before full-scale ingestion runs.
+- Any scale-up, resampling, or field/filter adjustment must preserve Section 2 top-level ratios and pass required regression gates.
 
 ---
 
@@ -92,7 +156,7 @@ Extractor version changes are treated as distributional shifts and require regre
 Synthetic data is used to reinforce core architectural mechanisms:
 
 - Credit assignment
-- Learned routing / gating
+- Learned routing/gating
 - Failure recovery
 - Stable state evolution
 
@@ -102,16 +166,16 @@ Synthetic data must not become the dominant optimization objective.
 
 | Category | Ratio | Target Mechanism |
 | --- | --- | --- |
-| Multi-step Credit Tasks | 3% | Delayed reward / credit routing |
-| Routing / Gating Tasks | 3% | Learned control flow |
+| Multi-step Credit Tasks | 3% | Delayed reward/credit routing |
+| Routing/Gating Tasks | 3% | Learned control flow |
 | Failure Recovery Tasks | 2% | Error detection and correction |
-| Structured World Modeling | 2% | Stable state update dynamics |
+| Structured World Modeling | 2% | Stable state-update dynamics |
 
 ### 4.3 Synthetic Constraints
 
 - Must not introduce new State IR token categories.
 - Must not enforce fixed reasoning templates.
-- Must remain ≤ 10% of total training tokens.
+- Must remain <= 10% of total training tokens.
 - ARC-family datasets are strictly regression probes, not synthetic sources.
 
 ---
@@ -120,10 +184,10 @@ Synthetic data must not become the dominant optimization objective.
 
 Benchmark datasets:
 
-- Are not included in training.
-- Serve exclusively as regression probes.
-- Must not influence mixture ratios.
-- Must not shape synthetic generation strategies.
+- Are not included in training
+- Serve exclusively as regression probes
+- Must not influence mixture ratios
+- Must not shape synthetic generation strategies
 
 ---
 
@@ -134,8 +198,10 @@ The training pipeline must track:
 1. Loss and perplexity sliced by data source
 2. Character distribution drift
 3. Language distribution drift
-4. Document proportion over time
+4. Document-extracted proportion over time
 5. Synthetic task performance distribution
+6. Pure LM sub-mixture realization versus Section 3.2 targets
+7. Dataset-level provenance and license-compliance coverage
 
 Significant drift requires investigation and potential gating.
 
@@ -145,9 +211,12 @@ Significant drift requires investigation and potential gating.
 
 The following changes require regression gating:
 
-- Adjustment of mixture ratios
+- Adjustment of top-level mixture ratios
+- Any change to the Section 3.2 Pure LM sub-mixture breakdown
 - Document corpus proportion changes
+- Dataset substitution, subset/config changes, or extraction-field changes
 - Extractor version updates
+- Dataset filter-rule changes (including sampling/reweighting policy)
 - Synthetic composition changes
 - Addition of new synthetic categories
 - Inclusion of benchmark data in training
@@ -157,13 +226,21 @@ The following changes require regression gating:
 ## 8. Final Mixture Summary
 
 ```text
-80% General Clean Text
-10% Document-Extracted Text
-10% IR-aligned Synthetic (3/3/2/2)
+Pure LM (90% total):
+- 60% HuggingFaceFW/fineweb-edu
+- 10% allenai/peS2o
+- 8% bigcode/the-stack
+- 4% open-web-math/open-web-math
+- 2% EleutherAI/proof-pile-2 (algebraic-stack)
+- 2% phanerozoic/Lean4-Mathlib
+- 2% RedPajama-Data-1T (arxiv)
+- 1% crumb/openstax-text
+- 1% RedPajama-Data-1T (stackexchange)
 
-Benchmark datasets = regression only
-No State IR schema drift
-Synthetic ≤ 10%
+IR-aligned Synthetic (10% total): 3/3/2/2
+Benchmark datasets: 0% in training (regression only)
+State IR schema drift: forbidden
+Synthetic share > 10%: forbidden
 ```
 
 This specification establishes a stable, pretraining-first data regime aligned with architectural invariants and long-run training stability.
