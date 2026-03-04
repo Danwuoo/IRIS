@@ -26,6 +26,7 @@ from .phase_d_gate import (
     evaluate_s5_status_v2,
     run_phase_d_gate,
 )
+from .phase_e_gate import run_phase_e_gate
 
 __all__ = [
     "GateContext",
@@ -52,4 +53,5 @@ __all__ = [
     "evaluate_s4_status_v2",
     "evaluate_s5_status_v2",
     "run_phase_d_gate",
+    "run_phase_e_gate",
 ]

@@ -1,5 +1,5 @@
 IRIS repository tree (snapshot)
-Generated: 2026-03-02
+Generated: 2026-03-03
 Omitted: *.tar, /data, *.json, /package, *.whl, /wheels, /.pytest_cache, /.venv-wsl-jax, /.venv-wsl-jax2, *.pyc, /packages, *.zip
 
 .
@@ -79,6 +79,7 @@ Omitted: *.tar, /data, *.json, /package, *.whl, /wheels, /.pytest_cache, /.venv-
     09_Training_Profile_SingleH100_3B.md
     10_Glossary_and_Normative_Status.md
     11_Phase_D_Diagnostics_Design_Note.md
+    12_Phase_E_Execution_Design_Note.md
     codex_plan/
       Documentation.md
       Implement.md
@@ -90,22 +91,28 @@ Omitted: *.tar, /data, *.json, /package, *.whl, /wheels, /.pytest_cache, /.venv-
   notebook/
     h100_validation_kaggle.ipynb
     phase_c_h100_pinned_manifest.ipynb
+    phase_e_pretrain_streaming_kaggle.ipynb
   pytest.ini
   README.md
   scripts/
     _bootstrap.py
     eval_toy.py
+    export_arc_benchmark_submission.py
     phase_c_gate.py
     phase_d_gate.py
+    phase_e_gate.py
+    run_arc_benchmark_probe.py
     s1_smoke.py
     s2_mounted.py
     s2_structural.py
+    train_pretrain.py
     train_toy.py
   src/
     iris/
       __init__.py
       arc/
         __init__.py
+        benchmark_bridge.py
         decoding.py
         encoding.py
         inference.py
@@ -124,6 +131,7 @@ Omitted: *.tar, /data, *.json, /package, *.whl, /wheels, /.pytest_cache, /.venv-
         __init__.py
         phase_c_gate.py
         phase_d_gate.py
+        phase_e_gate.py
       runtime/
         __init__.py
         jax_runtime.py
@@ -134,6 +142,18 @@ Omitted: *.tar, /data, *.json, /package, *.whl, /wheels, /.pytest_cache, /.venv-
       train/
         __init__.py
         checkpoint.py
+        data/
+          __init__.py
+          access.py
+          contracts.py
+          filters.py
+          iterator.py
+          planner.py
+          profiles/
+            pure_lm_90_v1.json
+          qa_gate.py
+          state_builder.py
+          token_accounting.py
         eval.py
         journal.py
         loop.py
@@ -142,6 +162,7 @@ Omitted: *.tar, /data, *.json, /package, *.whl, /wheels, /.pytest_cache, /.venv-
         __init__.py
         single_trunk.py
   tests/
+    test_arc_benchmark_bridge.py
     test_arc_inference.py
     test_arc_loaders.py
     conftest.py
@@ -149,6 +170,8 @@ Omitted: *.tar, /data, *.json, /package, *.whl, /wheels, /.pytest_cache, /.venv-
     test_levels_mounted.py
     test_phase_c_gate_regression.py
     test_phase_d_gate_regression.py
+    test_phase_e_gate_regression.py
+    test_pretrain_data_plane.py
     test_state_ir.py
     test_train_jax_resume.py
     test_trunk_jax.py

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any, Dict
 
@@ -15,6 +16,21 @@ from ..trunk import build_typed_sequence, forward_with_params
 from .checkpoint import load_checkpoint
 from .journal import last_applied_event, load_journal
 from .synthetic import generate_synthetic_state
+
+
+def _load_last_metrics_record(path: Path) -> Dict[str, Any]:
+    if not path.exists():
+        return {}
+    lines = [line.strip() for line in path.read_text(encoding="utf-8-sig").splitlines() if line.strip()]
+    if not lines:
+        return {}
+    try:
+        payload = json.loads(lines[-1])
+    except json.JSONDecodeError:
+        return {}
+    if isinstance(payload, dict):
+        return dict(payload)
+    return {}
 
 
 def _tree_to_jax(tree: Any) -> Any:
@@ -48,6 +64,10 @@ def evaluate_latest_run(
     if model_state.get("schema") != "iris.model_state/v2":
         raise RuntimeError("Unsupported checkpoint model schema. Expected iris.model_state/v2.")
     hidden_dim = int(model_state["hidden_dim"])
+    data_provenance = dict(checkpoint.get("data_provenance", {}))
+    last_metrics = _load_last_metrics_record(output_dir / "metrics.jsonl")
+    resolved_data_seed = int(last_metrics.get("data_seed", data_seed))
+    phase = str(last_metrics.get("phase", "C"))
     model_params = {
         "trunk": _tree_to_jax(model_state["trunk"]),
         "levels": _tree_to_jax(model_state["levels"]),
@@ -62,7 +82,7 @@ def evaluate_latest_run(
         segment_id=segment_id,
         micro_step_idx=0,
         hidden_dim=hidden_dim,
-        data_seed=data_seed,
+        data_seed=resolved_data_seed,
     )
     base_sequence = jnp.asarray(state.to_canonical_sequence(), dtype=jnp.float32)
     level_sequence, _, l6_credit = apply_level_stack_params(model_params["levels"], base_sequence, alpha=0.1)
@@ -83,10 +103,25 @@ def evaluate_latest_run(
         task_validity_score=0.5,
         task_confidence=0.5,
         extra={
-            "phase": "C",
+            "phase": phase,
             "segment_id": segment_id,
             "dataset_slice_id": dataset_slice_id,
             "eval.source": "latest_checkpoint",
+            "data_seed": resolved_data_seed,
+            "data_source": last_metrics.get("data_source", data_provenance.get("data_source", "synthetic")),
+            "data.profile_id": data_provenance.get("profile_id", last_metrics.get("data.profile_id", "")),
+            "data.sources_manifest_sha256": data_provenance.get(
+                "sources_manifest_sha256",
+                last_metrics.get("data.sources_manifest_sha256", ""),
+            ),
+            "data.tokenizer_fingerprint": data_provenance.get(
+                "tokenizer_fingerprint",
+                last_metrics.get("data.tokenizer_fingerprint", ""),
+            ),
+            "data.streaming_mode_effective": data_provenance.get(
+                "streaming_mode_effective",
+                last_metrics.get("data.streaming_mode_effective", ""),
+            ),
         },
     )
     metrics["trunk.backend"] = "jax"

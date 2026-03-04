@@ -89,3 +89,10 @@ Entries marked **REMOVED (2026-02-27)** no longer exist as files; they are liste
   - `docs/03_Level_Contracts_L0-L6.md`
   - `docs/04_Credit_Assignment_and_Recovery.md`
 - Metrics vocabulary and regression workflow are binding and live in `docs/05_Eval_Metrics_Spec.md` and `docs/06_Regression_and_Phase_Gates.md`.
+
+---
+
+## 5. Phase Execution Notes (Non-normative)
+
+- `docs/11_Phase_D_Diagnostics_Design_Note.md`
+- `docs/12_Phase_E_Execution_Design_Note.md`

@@ -24,6 +24,16 @@ from ..runtime import assert_jax_runtime
 from ..schema import STATE_IR_TOKEN_ORDER
 from ..trunk import build_typed_sequence, forward_with_params, init_trunk_params
 from .checkpoint import load_checkpoint, save_checkpoint_atomic
+from .data.contracts import load_default_pure_lm_profile, load_profile
+from .data.iterator import PureLMStreamingProvider, deterministic_sampling_key
+from .data.planner import build_hybrid_schedule
+from .data.state_builder import text_to_state_ir
+from .data.token_accounting import (
+    TokenLedger,
+    TokenizerError,
+    load_tokenizer_handle,
+    validate_tokenizer_required,
+)
 from .journal import APPLIED, PENDING, append_journal_event, journal_head_hash, load_journal, resolve_resume_pointer
 from .synthetic import dataset_slice_id_for_segment, generate_synthetic_state
 
@@ -241,12 +251,23 @@ class ToyTrainConfig:
     crash_segment: int = -1
     resume_path_id: str = "uninterrupted"
     runtime_lock_manifest_path: Optional[Path] = None
+    data_source: str = "synthetic"
+    pure_lm_profile: Optional[Path] = None
+    tokenizer_id_or_path: Optional[str] = None
+    streaming_mode: str = "auto"
+    snapshot_root: Optional[Path] = None
+    tokens_per_micro_step: int = 128
+    hybrid_pure_ratio: float = 0.9
 
     def as_dict(self) -> Dict[str, Any]:
         payload = dict(self.__dict__)
         payload["output_dir"] = str(self.output_dir)
         if payload.get("runtime_lock_manifest_path") is not None:
             payload["runtime_lock_manifest_path"] = str(payload["runtime_lock_manifest_path"])
+        if payload.get("pure_lm_profile") is not None:
+            payload["pure_lm_profile"] = str(payload["pure_lm_profile"])
+        if payload.get("snapshot_root") is not None:
+            payload["snapshot_root"] = str(payload["snapshot_root"])
         return payload
 
 
@@ -255,6 +276,16 @@ def run_toy_training(config: ToyTrainConfig) -> Dict[str, Any]:
         raise RuntimeError("Strict JAX mode requires --backend jax.")
     if config.level_impl != "mounted":
         raise RuntimeError("Phase C.1 main path requires --level-impl mounted.")
+    data_source = str(config.data_source).strip().lower()
+    if data_source not in {"synthetic", "pure_lm_streaming", "hybrid_mixture"}:
+        raise RuntimeError(
+            "data_source must be one of synthetic|pure_lm_streaming|hybrid_mixture."
+        )
+    try:
+        validate_tokenizer_required(data_source, config.tokenizer_id_or_path)
+    except TokenizerError as error:
+        raise RuntimeError(str(error)) from error
+
     assert_jax_runtime(
         device=config.device,
         require_gpu=bool(config.strict_jax and str(config.device).lower() == "gpu"),
@@ -271,6 +302,45 @@ def run_toy_training(config: ToyTrainConfig) -> Dict[str, Any]:
         phase=config.phase,
         runtime_lock_manifest_path=config.runtime_lock_manifest_path,
     )
+    segment_micro_steps = max(int(config.micro_steps), 1)
+    tokens_per_micro_step = max(int(config.tokens_per_micro_step), 1)
+
+    pretrain_provider = None
+    tokenizer_handle = None
+    data_profile_id = ""
+    data_sources_manifest_sha256 = ""
+    data_tokenizer_fingerprint = ""
+    data_streaming_mode_effective = "synthetic"
+    data_profile_hash = ""
+    token_ledger = TokenLedger()
+
+    if data_source in {"pure_lm_streaming", "hybrid_mixture"}:
+        try:
+            profile = (
+                load_profile(Path(config.pure_lm_profile))
+                if config.pure_lm_profile is not None
+                else load_default_pure_lm_profile()
+            )
+        except Exception as error:
+            raise RuntimeError(f"Failed to load Pure LM profile: {error}") from error
+        try:
+            tokenizer_handle = load_tokenizer_handle(str(config.tokenizer_id_or_path))
+        except TokenizerError as error:
+            raise RuntimeError(str(error)) from error
+        pretrain_provider = PureLMStreamingProvider(
+            profile=profile,
+            tokenizer_handle=tokenizer_handle,
+            run_id=config.run_id,
+            data_seed=config.data_seed,
+            streaming_mode=config.streaming_mode,
+            snapshot_root=config.snapshot_root,
+        )
+        manifest = pretrain_provider.sources_manifest
+        data_profile_id = manifest.profile_id
+        data_sources_manifest_sha256 = manifest.sources_manifest_sha256
+        data_tokenizer_fingerprint = tokenizer_handle.fingerprint
+        data_streaming_mode_effective = manifest.effective_mode
+        data_profile_hash = _stable_hash(profile.stable_payload())
 
     events = load_journal(journal_path)
     next_segment, last_applied, pending_event = resolve_resume_pointer(events)
@@ -306,7 +376,39 @@ def run_toy_training(config: ToyTrainConfig) -> Dict[str, Any]:
     start_segment = next_segment
     end_segment = start_segment + max(int(config.segments), 0)
     for segment_id in range(start_segment, end_segment):
-        dataset_slice_id = dataset_slice_id_for_segment(segment_id)
+        pure_segment_plan = None
+        pure_step_plan_by_idx = {}
+        if pretrain_provider is not None:
+            pure_segment_plan = pretrain_provider.build_segment_plan(
+                segment_id=segment_id,
+                micro_steps=segment_micro_steps,
+                tokens_per_micro_step=tokens_per_micro_step,
+            )
+            dataset_slice_id = pure_segment_plan.dataset_slice_id
+            data_plan_hash = pure_segment_plan.plan_hash
+            pure_step_plan_by_idx = {
+                step.micro_step_idx: step for step in pure_segment_plan.steps
+            }
+        else:
+            dataset_slice_id = dataset_slice_id_for_segment(segment_id)
+            data_plan_hash = _stable_hash(
+                {
+                    "data_source": data_source,
+                    "segment_id": segment_id,
+                    "micro_steps": segment_micro_steps,
+                    "data_seed": config.data_seed,
+                }
+            )
+
+        hybrid_schedule = None
+        if data_source == "hybrid_mixture":
+            hybrid_schedule = build_hybrid_schedule(
+                segment_id=segment_id,
+                micro_steps=segment_micro_steps,
+                pure_ratio=float(config.hybrid_pure_ratio),
+                data_seed=config.data_seed,
+            )
+
         rng_hash_pre = _stable_hash(rng_state)
         pending_record = append_journal_event(
             journal_path,
@@ -323,6 +425,12 @@ def run_toy_training(config: ToyTrainConfig) -> Dict[str, Any]:
                 "code_version_hash": code_version_hash,
                 "config_hash": config_hash,
                 "runtime_lock_manifest_sha256": runtime_lock["runtime_lock_manifest_sha256"],
+                "data.profile_id": data_profile_id,
+                "data.sources_manifest_sha256": data_sources_manifest_sha256,
+                "data.tokenizer_fingerprint": data_tokenizer_fingerprint,
+                "data.streaming_mode_effective": data_streaming_mode_effective,
+                "data.plan_hash": data_plan_hash,
+                "data_source": data_source,
                 "checkpoint_ref": None,
             },
         )
@@ -330,19 +438,108 @@ def run_toy_training(config: ToyTrainConfig) -> Dict[str, Any]:
         losses = []
         grad_accum = jax.tree_util.tree_map(jnp.zeros_like, model_params)
         last_state = None
-        for micro_step_idx in range(max(int(config.micro_steps), 1)):
+        last_data_source_id = "synthetic_ir_aligned"
+        last_sampling_key = deterministic_sampling_key(
+            run_id=config.run_id,
+            dataset_slice_id=dataset_slice_id,
+            segment_id=segment_id,
+            micro_step_idx=0,
+            data_seed=config.data_seed,
+        )
+        last_data_source_effective_mode = (
+            data_streaming_mode_effective if data_streaming_mode_effective else "synthetic"
+        )
+        for micro_step_idx in range(segment_micro_steps):
             if _should_crash(config, "execute", segment_id) and micro_step_idx == 0:
                 raise RuntimeError(
                     f"Injected crash at execute for segment_id={segment_id} (resume to replay)."
                 )
-            state = generate_synthetic_state(
-                run_id=config.run_id,
-                dataset_slice_id=dataset_slice_id,
-                segment_id=segment_id,
-                micro_step_idx=micro_step_idx,
-                hidden_dim=config.hidden_dim,
-                data_seed=config.data_seed,
-            )
+            if data_source == "synthetic":
+                state = generate_synthetic_state(
+                    run_id=config.run_id,
+                    dataset_slice_id=dataset_slice_id,
+                    segment_id=segment_id,
+                    micro_step_idx=micro_step_idx,
+                    hidden_dim=config.hidden_dim,
+                    data_seed=config.data_seed,
+                )
+                token_ledger.add("synthetic_ir_aligned", tokens_per_micro_step)
+                last_data_source_id = "synthetic_ir_aligned"
+                last_sampling_key = deterministic_sampling_key(
+                    run_id=config.run_id,
+                    dataset_slice_id=dataset_slice_id,
+                    segment_id=segment_id,
+                    micro_step_idx=micro_step_idx,
+                    data_seed=config.data_seed,
+                )
+                last_data_source_effective_mode = "synthetic"
+            elif data_source == "pure_lm_streaming":
+                if pretrain_provider is None or tokenizer_handle is None:
+                    raise RuntimeError("Pure LM streaming provider is not initialized.")
+                micro_plan = pure_step_plan_by_idx.get(micro_step_idx)
+                if micro_plan is None:
+                    raise RuntimeError(
+                        f"Missing micro-step plan for segment={segment_id}, micro_step_idx={micro_step_idx}."
+                    )
+                text_batch = pretrain_provider.sample_micro_step_text(
+                    segment_id=segment_id,
+                    dataset_slice_id=dataset_slice_id,
+                    micro_step_plan=micro_plan,
+                )
+                state = text_to_state_ir(
+                    text=text_batch.text,
+                    tokenizer=tokenizer_handle.tokenizer,
+                    hidden_dim=config.hidden_dim,
+                )
+                token_ledger.add(text_batch.source_id, text_batch.token_count)
+                last_data_source_id = text_batch.source_id
+                last_sampling_key = text_batch.sampling_key
+                last_data_source_effective_mode = text_batch.effective_mode
+            else:
+                if hybrid_schedule is None:
+                    raise RuntimeError("Hybrid schedule was not initialized.")
+                use_pure_stream = hybrid_schedule.pure_step_flags[micro_step_idx]
+                if use_pure_stream:
+                    if pretrain_provider is None or tokenizer_handle is None:
+                        raise RuntimeError("Pure LM streaming provider is not initialized.")
+                    micro_plan = pure_step_plan_by_idx.get(micro_step_idx)
+                    if micro_plan is None:
+                        raise RuntimeError(
+                            f"Missing micro-step plan for segment={segment_id}, micro_step_idx={micro_step_idx}."
+                        )
+                    text_batch = pretrain_provider.sample_micro_step_text(
+                        segment_id=segment_id,
+                        dataset_slice_id=dataset_slice_id,
+                        micro_step_plan=micro_plan,
+                    )
+                    state = text_to_state_ir(
+                        text=text_batch.text,
+                        tokenizer=tokenizer_handle.tokenizer,
+                        hidden_dim=config.hidden_dim,
+                    )
+                    token_ledger.add(text_batch.source_id, text_batch.token_count)
+                    last_data_source_id = text_batch.source_id
+                    last_sampling_key = text_batch.sampling_key
+                    last_data_source_effective_mode = text_batch.effective_mode
+                else:
+                    state = generate_synthetic_state(
+                        run_id=config.run_id,
+                        dataset_slice_id=f"{dataset_slice_id}-synthetic",
+                        segment_id=segment_id,
+                        micro_step_idx=micro_step_idx,
+                        hidden_dim=config.hidden_dim,
+                        data_seed=config.data_seed,
+                    )
+                    token_ledger.add("synthetic_ir_aligned", tokens_per_micro_step)
+                    last_data_source_id = "synthetic_ir_aligned"
+                    last_sampling_key = deterministic_sampling_key(
+                        run_id=config.run_id,
+                        dataset_slice_id=dataset_slice_id,
+                        segment_id=segment_id,
+                        micro_step_idx=micro_step_idx,
+                        data_seed=config.data_seed,
+                    )
+                    last_data_source_effective_mode = "synthetic"
             (loss, _), grads = jax.value_and_grad(_loss_and_aux, has_aux=True)(
                 model_params,
                 state,
@@ -353,7 +550,7 @@ def run_toy_training(config: ToyTrainConfig) -> Dict[str, Any]:
             last_state = state
 
         mean_loss = float(np.mean(np.asarray(losses, dtype=np.float64)))
-        micro_step_count = float(max(int(config.micro_steps), 1))
+        micro_step_count = float(segment_micro_steps)
         mean_grads = jax.tree_util.tree_map(lambda grad: grad / micro_step_count, grad_accum)
 
         if _should_crash(config, "pre_commit", segment_id):
@@ -396,6 +593,16 @@ def run_toy_training(config: ToyTrainConfig) -> Dict[str, Any]:
             "journal_head_hash": journal_head_hash(current_events),
             "code_version_hash": code_version_hash,
             "config_hash": config_hash,
+            "dataset_plan_hash": data_plan_hash,
+            "data_provenance": {
+                "data_source": data_source,
+                "profile_id": data_profile_id,
+                "profile_hash": data_profile_hash,
+                "sources_manifest_sha256": data_sources_manifest_sha256,
+                "tokenizer_fingerprint": data_tokenizer_fingerprint,
+                "streaming_mode_effective": data_streaming_mode_effective,
+                "token_ledger": token_ledger.as_dict(),
+            },
         }
         checkpoint_ref = save_checkpoint_atomic(
             checkpoint_dir=checkpoints_dir,
@@ -423,6 +630,14 @@ def run_toy_training(config: ToyTrainConfig) -> Dict[str, Any]:
                 "code_version_hash": code_version_hash,
                 "config_hash": config_hash,
                 "runtime_lock_manifest_sha256": runtime_lock["runtime_lock_manifest_sha256"],
+                "data.profile_id": data_profile_id,
+                "data.sources_manifest_sha256": data_sources_manifest_sha256,
+                "data.tokenizer_fingerprint": data_tokenizer_fingerprint,
+                "data.streaming_mode_effective": data_streaming_mode_effective,
+                "data.plan_hash": data_plan_hash,
+                "data.source_last": last_data_source_id,
+                "data.sample_key_last": last_sampling_key,
+                "data_source": data_source,
                 "checkpoint_ref": str(checkpoint_ref),
             },
         )
@@ -473,6 +688,17 @@ def run_toy_training(config: ToyTrainConfig) -> Dict[str, Any]:
                     "code_version_hash": code_version_hash,
                     "config_hash": config_hash,
                     "trunk.backend": "jax",
+                    "data_source": data_source,
+                    "data.profile_id": data_profile_id,
+                    "data.profile_hash": data_profile_hash,
+                    "data.sources_manifest_sha256": data_sources_manifest_sha256,
+                    "data.tokenizer_fingerprint": data_tokenizer_fingerprint,
+                    "data.streaming_mode_effective": data_streaming_mode_effective,
+                    "data.plan_hash": data_plan_hash,
+                    "data.source_last": last_data_source_id,
+                    "data.sample_key_last": last_sampling_key,
+                    "data.source_effective_mode_last": last_data_source_effective_mode,
+                    "data.token_ledger": token_ledger.as_dict(),
                 },
             )
             append_jsonl(metrics_path, metrics)
@@ -487,4 +713,9 @@ def run_toy_training(config: ToyTrainConfig) -> Dict[str, Any]:
         "journal_path": str(journal_path),
         "metrics_path": str(metrics_path),
         "checkpoints_dir": str(checkpoints_dir),
+        "data_source": data_source,
+        "data_profile_id": data_profile_id,
+        "data_sources_manifest_sha256": data_sources_manifest_sha256,
+        "data_tokenizer_fingerprint": data_tokenizer_fingerprint,
+        "data_streaming_mode_effective": data_streaming_mode_effective,
     }
