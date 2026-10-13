@@ -1,24 +1,50 @@
 # IRIS — Integrated Reasoning via Internal State
 
-IRIS 目前是一份 **模型架構與訓練治理設計作品**。此 checkout 只有文件，沒有 `src/`、測試、可執行模型、權重或實驗結果；不能把文件中的規格要求當成已運作的系統。[架構憲法](docs/01_Architecture_Constitution.md) 定義 single trunk、canonical State IR 與 learned control；[IRIS-X](IRIS-X.md) 是下一版 runtime 的非規範假設草案。
+IRIS 探索如何用單一主要參數主幹、共同的 State IR 與可學習控制，組織模型內部的推理、記憶及失敗恢復。目前 repository 保存的是**架構與訓練治理設計**，尚未提供模型實作、權重或實驗結果。
 
-## 教授閱讀路線
+## 設計內容
 
-1. [Professor-facing Repository Audit](PROFESSOR_AUDIT.md)：五面向判斷、文件缺失與合約不一致。
-2. [Architecture Constitution](docs/01_Architecture_Constitution.md)：研究意圖與不可違反的架構邊界；末尾 appendix 為非規範 sketch。
-3. [State IR Spec](docs/02_State_IR_Spec.md) → [Level Contracts](docs/03_Level_Contracts_L0-L6.md) → [Credit Assignment and Recovery](docs/04_Credit_Assignment_and_Recovery.md)：表徵、介面與責任如何連接。
-4. [Eval Metrics](docs/05_Eval_Metrics_Spec.md) → [Phase Gates](docs/06_Regression_and_Phase_Gates.md) → [Training Run Governance](docs/08_Training_Run_Governance.md)：預定如何量測失敗與處理 resume，而非已執行的驗證報告。
-5. [IRIS-X 草案](IRIS-X.md)：對可執行行動、context 與 side-effect 治理的未實作假設。它不覆蓋現行合約。
+核心問題是：不同推理階段如何共享狀態、維持清楚的介面，並將失敗歸因到可修正的環節？文件由架構限制出發，逐步定義狀態表示、Level 介面、credit routing、回歸測試與訓練恢復要求。
 
-[原始文件索引](docs/00_INDEX.md) 與 [AGENTS.md](AGENTS.md) 提到的 `docs/09_Training_Profile_SingleH100_3B.md`、`docs/10_Glossary_and_Normative_Status.md`、`docs/11_Phase_D_Diagnostics_Design_Note.md`、`docs/12_Phase_E_Execution_Design_Note.md` 在本 checkout 缺失。不同規範對 Level 3–6 的責任及 credit vector 也有不一致，詳見 audit；本 README 不自行裁決。
+| 主題 | 閱讀入口 |
+| --- | --- |
+| 架構目標、single trunk 與 learned control | [Architecture Constitution](docs/01_Architecture_Constitution.md) |
+| Canonical State IR、token inventory 與 Program IR 邊界 | [State IR Spec](docs/02_State_IR_Spec.md) |
+| 各層的輸入、輸出與禁止事項 | [Level Contracts L0–L6](docs/03_Level_Contracts_L0-L6.md) |
+| 失敗分類、credit assignment 與 recovery | [Credit Assignment and Recovery](docs/04_Credit_Assignment_and_Recovery.md) |
+| 評估欄位與分階段回歸要求 | [Eval Metrics](docs/05_Eval_Metrics_Spec.md)、[Regression and Phase Gates](docs/06_Regression_and_Phase_Gates.md) |
+| 資料攝取與訓練執行要求 | [Data Mixture](docs/07_Data_Mixture_and_Ingestion.md)、[Training Run Governance](docs/08_Training_Run_Governance.md) |
 
-## 如何核查
+建議先讀 Architecture Constitution，再沿 State IR → Level Contracts → Credit Assignment 閱讀。評估與訓練文件描述的是預定驗證方法，不是已執行的測試報告。
 
-這個版本可重做的是文件審閱；目前沒有可查實的安裝、訓練或 benchmark 指令。建議先用上述相對連結閱讀，再在 repo 根目錄確認版本與追蹤檔案：
+[IRIS-X.md](IRIS-X.md) 是本庫保存的非規範 runtime 假設草案，不覆蓋架構契約，也不代表獨立 IRIS-X repository 的最新實作狀態。完整歷史索引見 [docs/00_INDEX.md](docs/00_INDEX.md)，文件權威與修改邊界見 [AGENTS.md](AGENTS.md)。
 
-```powershell
+## 文件狀態與未決問題
+
+目前有 01–08 設計文件。歷史索引及工作契約提到的以下文件不在這個版本中：
+
+```text
+docs/09_Training_Profile_SingleH100_3B.md
+docs/10_Glossary_and_Normative_Status.md
+docs/11_Phase_D_Diagnostics_Design_Note.md
+docs/12_Phase_E_Execution_Design_Note.md
+```
+
+現有文件仍有三處需由架構作者作版本化裁決：
+
+- 03 與 04／05 對 L3–L6 的責任分配不同，例如 budget/control、memory、abstraction 與 evaluation 的所屬層。
+- 04 使用 `c0…c5`，05 使用 L0…L6；credit vector 的六維／七維語意尚未統一。
+- 02 禁止將 Program IR tokens 拼入 `Z`，03 又以 `program-like tokens` 描述輸出；兩者的表示邊界尚待澄清。
+
+README 不裁決這些衝突，也不修改規範。H100、3B、runtime lock 與 S1–S8 等文字是設計／治理要求，沒有對應的實際訓練或通過紀錄。
+
+## 取得與核對版本
+
+這是一個文件 repository，沒有安裝、訓練或 benchmark 執行入口。可用 Git 固定並核對正在閱讀的快照：
+
+```sh
 git rev-parse HEAD
 git ls-files
 ```
 
-本次在 2026-10-11 核查 HEAD `69d7a7c1717bec5fd5b6c01a5038203270e20ce2`。文件中的 H100、3B、runtime lock 與 S1–S8 是設計／治理要求，沒有對應實際執行證據。本人、AI、第三方的既有貢獻歸屬與公開授權仍待作者確認；根目錄未找到 LICENSE。
+目前未附 LICENSE；外部研究來源與設計歸屬仍需隨後續正式研究紀錄補齊。
